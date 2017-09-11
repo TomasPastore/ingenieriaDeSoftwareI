@@ -58,7 +58,10 @@ class Entero(Numero):
             return Entero((self._valor*sumando.denominador().valor() + sumando.numerador().valor())) /  sumando.denominador()
  
     def __mul__(self,factor):
-        return Entero(self._valor*factor.valor())
+        if isinstance(factor, self.__class__):
+            return Entero(self._valor*factor.valor())
+        elif isinstance(factor, Fraccion):
+            return Entero(self._valor * factor.numerador().valor()) / factor.denominador()
          
     def __div__(self,divisor):
         return divisor.dividirEntero(self)
