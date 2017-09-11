@@ -64,7 +64,10 @@ class Entero(Numero):
             return Entero(self._valor * factor.numerador().valor()) / factor.denominador()
          
     def __div__(self,divisor):
-        return divisor.dividirEntero(self)
+        if isinstance(divisor, self.__class__):
+            return divisor.dividirEntero(self)
+        elif isinstance(divisor, Fraccion):
+            return self * (divisor.denominador() / divisor.numerador()) 
         
     def dividirEntero(self,dividendo):
         if self.esCero():
@@ -136,10 +139,14 @@ class Fraccion(Numero):
             return (self._numerador * factor.numerador()) / (self._denominador * factor.denominador())
         elif isinstance(factor, Entero):
             return factor * self
-        #No estoy seguro de si esa solución se puede hacer... (?)
+        #No estoy seguro de si eso se puede hacer... (?)
             
     def __div__(self,divisor):
-        return divisor.dividirFraccion(self)
+        if isinstance(divisor, self.__class__):
+            return divisor.dividirFraccion(self)
+        elif isinstance(divisor, Entero):
+            return self * (Entero(1) / divisor)
+        #Recycling
     
     def dividirFraccion(self,dividendo):
         return (dividendo.numerador() * self._denominador) / (dividendo.denominador () * self._numerador)
