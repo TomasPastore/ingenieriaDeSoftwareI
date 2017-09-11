@@ -67,7 +67,7 @@ class Entero(Numero):
         if isinstance(divisor, self.__class__):
             return divisor.dividirEntero(self)
         elif isinstance(divisor, Fraccion):
-            return self * (divisor.denominador() / divisor.numerador()) 
+            return self * divisor.denominador() / divisor.numerador() 
         
     def dividirEntero(self,dividendo):
         if self.esCero():
@@ -101,7 +101,7 @@ class Entero(Numero):
     
 class Fraccion(Numero):
     
-    def __init__(self, numerador, denominador):
+    def __init__(self, numerador, denominador): ##Para mi hay que reducir aca y mantener el invariante, los tests 15 y 16 pasan desde un principio pero porque los create crean con a/b. 
         self._numerador = numerador
         self._denominador = denominador
 
@@ -138,14 +138,16 @@ class Fraccion(Numero):
         if isinstance(factor, self.__class__):
             return (self._numerador * factor.numerador()) / (self._denominador * factor.denominador())
         elif isinstance(factor, Entero):
-            return factor * self
+             return factor * self
         #No estoy seguro de si eso se puede hacer... (?)
-            
+        #Para mi no pongamos eso porque nos van a decir que dependemos del otro, mas facil por las dudas directamente hacer
+        # return Entero(self.numerador().valor() * factor.valor()) / self.denominador()
     def __div__(self,divisor):
         if isinstance(divisor, self.__class__):
             return divisor.dividirFraccion(self)
         elif isinstance(divisor, Entero):
             return self * (Entero(1) / divisor)
+            # o return self.numerador()/ Entero(self.denominador().valor()*divisor.valor()) para no depender de la multiplicacion de Enteros
         #Recycling
     
     def dividirFraccion(self,dividendo):
@@ -299,6 +301,11 @@ class NumeroTest(unittest.TestCase):
     #
     def test15UnaFraccionPuedeSerIgualAUnEntero(self):
         self.assertEquals(self.dos,self.cuatroMedios)
+    
+    def test42DeberiamosReducirAlCrearFracciones(self):    
+        ##lo agregue yo, despues lo sacamos, tomi p, esto es prueba de que no pasarian asi. 
+        assert(self.dos.__eq__(Fraccion(4,2))== False)
+        assert(Fraccion(4,2).__eq__(self.dos)==False)
 
     def test16LasFraccionesAparentesSonIguales(self):
         self.assertEquals(self.unMedio,self.dosCuartos)
