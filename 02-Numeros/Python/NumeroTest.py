@@ -132,7 +132,11 @@ class Fraccion(Numero):
             
         
     def __mul__(self,factor):
-        return (self._numerador * factor.numerador()) / (self._denominador * factor.denominador())
+        if isinstance(factor, self.__class__):
+            return (self._numerador * factor.numerador()) / (self._denominador * factor.denominador())
+        elif isinstance(factor, Entero):
+            return factor * self
+        #No estoy seguro de si esa solución se puede hacer... (?)
             
     def __div__(self,divisor):
         return divisor.dividirFraccion(self)
