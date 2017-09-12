@@ -45,11 +45,11 @@ class Entero(Numero):
         return self._valor == 1
 
     def __eq__(self,anObject):
-        if isinstance(anObject, self.__class__):
-            return self._valor==anObject._valor
-        else: 
-            return False
-        
+        return self.mismaClaseYmismoValor(anObject)
+    
+    def mismaClaseYmismoValor(self,anObject):
+        return isinstance(anObject, self.__class__) and self._valor==anObject._valor
+    
     def __add__(self,sumando):
         
         return sumando.sumarEntero(self)
@@ -60,25 +60,41 @@ class Entero(Numero):
         #     return Entero((self._valor*sumando.denominador().valor() + sumando.numerador().valor())) /  sumando.denominador()
  
     def __mul__(self,factor):
+        return factor.multiplicarEntero(self)
+        '''
         if isinstance(factor, self.__class__):
             return Entero(self._valor*factor.valor())
         elif isinstance(factor, Fraccion):
             return Entero(self._valor * factor.numerador().valor()) / factor.denominador()
-         
+        '''
     def __div__(self,divisor):
+        return divisor.dividirEntero(self)
+        '''
         if isinstance(divisor, self.__class__):
             return divisor.dividirEntero(self)
         elif isinstance(divisor, Fraccion):
             return self * divisor.denominador() / divisor.numerador()
-
+        '''
     def sumarEntero(self,sumando):
         return Entero(self._valor + sumando.valor())
 
     def sumarFraccion(self,sumando):
         return Entero((self._valor*sumando.denominador().valor() + sumando.numerador().valor())) /  sumando.denominador()
+    
+    def multiplicarEntero(self,factor):
+        return Entero(self._valor*factor.valor())
         
+    def multiplicarFraccion(self,factor):
+        return Entero(self._valor * factor.numerador().valor()) / factor.denominador()
+        
+    def dividirFraccion(self,dividendo):
+        return dividendo * (Entero(1) / self)
+    
     def dividirEntero(self,dividendo):
-        if self.esCero():
+        if self.esCero():  ##De alguna forma hay que hacer que el objeto 0 sepa responder dividirEntero pero que su respuesta 
+                           ##sea levantar la excepcion, y que la de todos los demas numeros hacer esto, 
+                           ##lo unico que se me ocurre es por aca "should be implemented by subclass", crear en la jerarquia abajo de entero dos clases, una 
+                           ##EnterosDistintosDe0 Y otra CeroClass ... horrible pero bueno. Creo que no hay muchas opciones.
             raise Exception(Numero.DESCRIPCION_DE_ERROR_DE_DIVISION_POR_CERO)
         if self.esUno():
             return dividendo
@@ -126,11 +142,11 @@ class Fraccion(Numero):
         return False
 
     def __eq__(self,anObject):
-        if isinstance(anObject, self.__class__):
-            return self._numerador*anObject.denominador()==self._denominador*anObject.numerador()
-        else: 
-            return False
-        
+        return self.mismaClaseYmismoValor(anObject)
+    
+    def mismaClaseYmismoValor(self,anObject):
+        return isinstance(anObject, self.__class__) and (self._numerador*anObject.denominador()==self._denominador*anObject.numerador() )
+    
     def __add__(self,sumando):  #sumando puede ser entero
         
         # if isinstance(sumando, self.__class__):
@@ -146,6 +162,8 @@ class Fraccion(Numero):
             
         
     def __mul__(self,factor):
+        return factor.multiplicarFraccion(self)
+        '''
         if isinstance(factor, self.__class__):
             return (self._numerador * factor.numerador()) / (self._denominador * factor.denominador())
         elif isinstance(factor, Entero):
@@ -153,13 +171,17 @@ class Fraccion(Numero):
         #No estoy seguro de si eso se puede hacer... (?)
         #Para mi no pongamos eso porque nos van a decir que dependemos del otro, mas facil por las dudas directamente hacer
         # return Entero(self.numerador().valor() * factor.valor()) / self.denominador()
+        '''
     def __div__(self,divisor):
+        return divisor.dividirFraccion(self)
+        '''
         if isinstance(divisor, self.__class__):
             return divisor.dividirFraccion(self)
         elif isinstance(divisor, Entero):
             return self * (Entero(1) / divisor)
             # o return self.numerador()/ Entero(self.denominador().valor()*divisor.valor()) para no depender de la multiplicacion de Enteros
         #Recycling
+        '''
 
     def sumarEntero(self,sumando):
         return Entero((sumando.valor()*self.denominador().valor() + self.numerador().valor())) /  self.denominador()    
@@ -170,7 +192,16 @@ class Fraccion(Numero):
         segundoSumando = self._denominador * sumando.numerador()
         nuevoNumerador = primerSumando + segundoSumando
         return nuevoNumerador / nuevoDenominador
-
+    
+    def multiplicarEntero(self,factor):
+        return Entero(self.numerador().valor() * factor.valor()) / self.denominador()
+        
+    def multiplicarFraccion(self,factor):
+        return (self._numerador * factor.numerador()) / (self._denominador * factor.denominador())
+        
+    def dividirEntero(self,dividendoEntero):
+        return dividendoEntero * (self.denominador() / self.numerador()) 
+        
     def dividirFraccion(self,dividendo):
         return (dividendo.numerador() * self._denominador) / (dividendo.denominador () * self._numerador)
 
