@@ -9,7 +9,7 @@
 #  
 import unittest
 
-class Numero:
+class Numero(object):
     DESCRIPCION_DE_ERROR_DE_DIVISION_POR_CERO = 'No se puede dividir por 0'
 
     def esCero(self):
@@ -31,7 +31,16 @@ class Numero:
         raise NotImplementedError('Should be implemented by the subclass')
 
 class Entero(Numero):
-    
+
+    class __metaclass__(type):
+        def __call__(cls,*a,**kw):
+            if a[0] == 0:
+                return Cero()
+            elif a[0] == 1:
+                return Uno()
+            else:
+                return super(cls.__class__, cls).__call__(*a, **kw)
+
     def __init__(self, numero):
         self._valor = numero
 
@@ -53,28 +62,13 @@ class Entero(Numero):
     def __add__(self,sumando):
         
         return sumando.sumarEntero(self)
-        
-        # if isinstance(sumando, self.__class__):
-        #     return Entero(self._valor+sumando.valor())
-        # elif isinstance(sumando, Fraccion):
-        #     return Entero((self._valor*sumando.denominador().valor() + sumando.numerador().valor())) /  sumando.denominador()
  
     def __mul__(self,factor):
         return factor.multiplicarEntero(self)
-        '''
-        if isinstance(factor, self.__class__):
-            return Entero(self._valor*factor.valor())
-        elif isinstance(factor, Fraccion):
-            return Entero(self._valor * factor.numerador().valor()) / factor.denominador()
-        '''
+
     def __div__(self,divisor):
         return divisor.dividirEntero(self)
-        '''
-        if isinstance(divisor, self.__class__):
-            return divisor.dividirEntero(self)
-        elif isinstance(divisor, Fraccion):
-            return self * divisor.denominador() / divisor.numerador()
-        '''
+
     def sumarEntero(self,sumando):
         return Entero(self._valor + sumando.valor())
 
@@ -91,41 +85,117 @@ class Entero(Numero):
         return dividendo * (Entero(1) / self)
     
     def dividirEntero(self,dividendo):
-        if self.esCero():  ##De alguna forma hay que hacer que el objeto 0 sepa responder dividirEntero pero que su respuesta 
-                           ##sea levantar la excepcion, y que la de todos los demas numeros hacer esto, 
-                           ##lo unico que se me ocurre es por aca "should be implemented by subclass", crear en la jerarquia abajo de entero dos clases, una 
-                           ##EnterosDistintosDe0 Y otra CeroClass ... horrible pero bueno. Creo que no hay muchas opciones.
-            raise Exception(Numero.DESCRIPCION_DE_ERROR_DE_DIVISION_POR_CERO)
-        if self.esUno():
-            return dividendo
-        
+
         maximoComunDivisor = self.maximoComunDivisorCon(dividendo)
         #No puedo usar / porque puedo caer en una recursion, por eso divido directamente
         #los valores porque se que son enteros
         numerador = dividendo.divisionEntera(maximoComunDivisor)
         denominador = self.divisionEntera(maximoComunDivisor)
         
-        if denominador.esUno():
-            return numerador
+        return denominador.construirNumeroCon(numerador)
         
-        return Fraccion(numerador,denominador)
-
     def divisionEntera(self,divisorEntero):
         return Entero (self._valor / divisorEntero.valor())
             
-    def maximoComunDivisorCon(self,otroEntero):
+    def maximoComunDivisorCon(self,otroEntero): 
         if otroEntero.esCero(): 
             return self
         else:
             return otroEntero.maximoComunDivisorCon(self.restoCon(otroEntero))
+
+    def restoCon(self, divisor):
+        return Entero (self._valor % divisor.valor());
+
+    def construirNumeroCon(self,numerador):
+        return Fraccion(numerador,self)
+        
+class Uno(Entero):
+
+    class __metaclass__(Entero.__metaclass__):
+        def __call__(cls,*a,**kw):
+            return super(Entero.__class__, Uno).__call__(*a, **kw)
+
+    def __init__(self):
+        self._valor = 1
+
+    def esCero(self):
+        return False
+
+    def esUno(self):
+        return True
+
+    def __add__(self,sumando):
+        return sumando.sumarEntero(self)
+
+    def __mul__(self,factor):
+        return factor
+    
+    def __div__(self,divisor):
+        return divisor.dividirEntero(self)
+
+    def dividirEntero(self,otroNumero):
+        return otroNumero
+
+    def dividirFraccion(self,unaFraccion):
+        return unaFraccion
+
+    def maximoComunDivisorCon(self,otro):
+        return self
+
+    def valor(self):
+        return 1
     
     def restoCon(self, divisor):
         return Entero (self._valor % divisor.valor());
-        
+
+    def multiplicarEntero(self,otro):
+        return otro
+
+    def construirNumeroCon(self,numerador):
+        return numerador
+
+class Cero(Entero):
+
+    class __metaclass__(Entero.__metaclass__):
+        def __call__(cls,*a,**kw):
+            return super(Entero.__class__, Cero).__call__(*a, **kw)
+
+    def __init__(self):
+        self._value = 0
     
+    def esCero(self):
+        return True
+
+    def esUno(self):
+        return False
+
+    def __add__(self,sumando):
+        return sumando
+
+    def __mul__(self,factor):
+        return self
+    
+    def __div__(self,divisor):
+        return divisor.dividirEntero(self)
+
+    def dividirEntero(self,otroNumero):
+        raise Exception(Numero.DESCRIPCION_DE_ERROR_DE_DIVISION_POR_CERO)
+
+    def dividirFraccion(self,unaFraccion):
+        raise Exception(Numero.DESCRIPCION_DE_ERROR_DE_DIVISION_POR_CERO)
+
+    def valor(self):
+        return 0
+
+    def maximoComunDivisorCon(self,otro):
+        return otro
+            
+    def restoCon(self, divisor):
+        return Entero (self._valor % divisor.valor());
+
 class Fraccion(Numero):
     
-    def __init__(self, numerador, denominador): ##Para mi hay que reducir aca y mantener el invariante, los tests 15 y 16 pasan desde un principio pero porque los create crean con a/b. 
+    def __init__(self, numerador, denominador): 
         self._numerador = numerador
         self._denominador = denominador
 
@@ -147,42 +217,15 @@ class Fraccion(Numero):
     def mismaClaseYmismoValor(self,anObject):
         return isinstance(anObject, self.__class__) and (self._numerador*anObject.denominador()==self._denominador*anObject.numerador() )
     
-    def __add__(self,sumando):  #sumando puede ser entero
-        
-        # if isinstance(sumando, self.__class__):
-        #     nuevoDenominador = self._denominador * sumando.denominador()
-        #     primerSumando = self._numerador * sumando.denominador()
-        #     segundoSumando = self._denominador * sumando.numerador()
-        #     nuevoNumerador = primerSumando + segundoSumando
-        #     return nuevoNumerador / nuevoDenominador
-        # elif isinstance(sumando, Entero):
-        #     return Entero((sumando.valor()*self.denominador().valor() + self.numerador().valor())) /  self.denominador()
-
+    def __add__(self,sumando):  
         return sumando.sumarFraccion(self)    
             
-        
     def __mul__(self,factor):
         return factor.multiplicarFraccion(self)
-        '''
-        if isinstance(factor, self.__class__):
-            return (self._numerador * factor.numerador()) / (self._denominador * factor.denominador())
-        elif isinstance(factor, Entero):
-             return factor * self
-        #No estoy seguro de si eso se puede hacer... (?)
-        #Para mi no pongamos eso porque nos van a decir que dependemos del otro, mas facil por las dudas directamente hacer
-        # return Entero(self.numerador().valor() * factor.valor()) / self.denominador()
-        '''
+        
     def __div__(self,divisor):
         return divisor.dividirFraccion(self)
-        '''
-        if isinstance(divisor, self.__class__):
-            return divisor.dividirFraccion(self)
-        elif isinstance(divisor, Entero):
-            return self * (Entero(1) / divisor)
-            # o return self.numerador()/ Entero(self.denominador().valor()*divisor.valor()) para no depender de la multiplicacion de Enteros
-        #Recycling
-        '''
-
+        
     def sumarEntero(self,sumando):
         return Entero((sumando.valor()*self.denominador().valor() + self.numerador().valor())) /  self.denominador()    
      
@@ -287,7 +330,7 @@ class NumeroTest(unittest.TestCase):
         self.assertEqual(self.uno, self.dos/self.dos)
     
     def test06SumaDeFracciones(self):
-        sieteDecimos = Entero(7) / Entero (10) # <- REEMPLAZAR POR LO QUE CORRESPONDA;   preguntar
+        sieteDecimos = self.crearFraccionCon(Entero(7), Entero (10)) 
         self.assertEqual (sieteDecimos,self.unQuinto+self.unMedio)
         # 
         # La suma de fracciones es:
@@ -354,11 +397,6 @@ class NumeroTest(unittest.TestCase):
     def test15UnaFraccionPuedeSerIgualAUnEntero(self):
         self.assertEquals(self.dos,self.cuatroMedios)
     
-    def test42DeberiamosReducirAlCrearFracciones(self):    
-        ##lo agregue yo, despues lo sacamos, tomi p, esto es prueba de que no pasarian asi. 
-        assert(self.dos.__eq__(Fraccion(4,2))== False)
-        assert(Fraccion(4,2).__eq__(self.dos)==False)
-
     def test16LasFraccionesAparentesSonIguales(self):
         self.assertEquals(self.unMedio,self.dosCuartos)
         #
