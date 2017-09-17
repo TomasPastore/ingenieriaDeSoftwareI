@@ -128,7 +128,7 @@ class Uno(Entero):
 
     class __metaclass__(Entero.__metaclass__):
         def __call__(cls,*a,**kw):
-            return super(Entero.__class__, Uno).__call__(*a, **kw)
+            return super(Entero.__class__, cls).__call__(*a, **kw)
 
     def __init__(self):
         self._valor = 1
@@ -139,14 +139,8 @@ class Uno(Entero):
     def esUno(self):
         return True
 
-    def __add__(self,sumando):
-        return sumando.sumarEntero(self)
-
     def __mul__(self,factor):
         return factor
-    
-    def __div__(self,divisor):
-        return divisor.dividirEntero(self)
 
     def dividirEntero(self,otroNumero):
         return Fraccion(self,otroNumero)
@@ -173,7 +167,7 @@ class Cero(Entero):
 
     class __metaclass__(Entero.__metaclass__):
         def __call__(cls,*a,**kw):
-            return super(Entero.__class__, Cero).__call__(*a, **kw)
+            return super(Entero.__class__, cls).__call__(*a, **kw)
 
     def __init__(self):
         self._value = 0
