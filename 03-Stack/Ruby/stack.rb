@@ -39,13 +39,14 @@ class Stack
     raise 'Should be implemented'
   end
 
-  class Node
+  module NodeInterface
     def call_with_value(*)
       raise "Should be implemented by subclass"
     end
   end
 
-  class NodeWithValue < Node
+  class NodeWithValue
+    include NodeInterface
     def initialize(anObject)
       @value = anObject
     end
@@ -55,7 +56,8 @@ class Stack
     end
   end
 
-  class EmptyNode < Node
+  class EmptyNode
+    include NodeInterface
     def initialize(error_message_to_raise)
       @error_message = error_message_to_raise
     end
@@ -63,7 +65,6 @@ class Stack
     def call_with_value(aProc)
       raise @error_message
     end
-
   end
 
 end
