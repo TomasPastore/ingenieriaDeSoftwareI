@@ -12,11 +12,11 @@ class Stack
   end
 
   def pop   
-    @stack.last.map_value_with lambda {
+    @stack.last.with_value do
       |a_value|
       @stack.pop
       return a_value
-    }
+    end
 
   end
 
@@ -46,7 +46,7 @@ class Stack
       self.should_be_implemented_by_subclass
     end
 
-    def map_value_with(a_block)
+    def with_value(*)
       self.should_be_implemented_by_subclass
     end 
 
@@ -66,8 +66,8 @@ class Stack
       @value
     end
 
-    def map_value_with(a_block)
-      a_block.call(@value)
+    def with_value()
+      yield(@value)
     end
   end
 
@@ -81,7 +81,7 @@ class Stack
       raise @error_message
     end
 
-    def map_value_with(*)
+    def with_value(*)
       value
     end
   end
