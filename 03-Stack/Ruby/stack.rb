@@ -1,10 +1,10 @@
 
 class Stack
 
-  @@stack_empty_error_description = "No element found"
+  @@STACK_EMPTY_ERROR_DESCRIPTION = "No element found"
 
   def initialize
-    @stack = [EmptyNode.new(@@stack_empty_error_description)]
+    @stack = [EmptyNode.new(@@STACK_EMPTY_ERROR_DESCRIPTION)]
   end
 
   def push(an_object)
@@ -12,7 +12,12 @@ class Stack
   end
 
   def pop   
-    @stack.pop.value
+    @stack.last.map_value_with lambda {
+      |a_value|
+      @stack.pop
+      return a_value
+    }
+
   end
 
   def top
@@ -28,7 +33,7 @@ class Stack
   end
 
   def self.stack_empty_error_description
-    @@stack_empty_error_description
+    @@STACK_EMPTY_ERROR_DESCRIPTION
   end
 
   def should_implement
@@ -36,9 +41,19 @@ class Stack
   end
 
   module NodeInterface
+  
     def value
+      self.should_be_implemented_by_subclass
+    end
+
+    def map_value_with(a_block)
+      self.should_be_implemented_by_subclass
+    end 
+
+    def should_be_implemented_by_subclass
       raise "Should be implemented by subclass"
     end
+  
   end
 
   class NodeWithValue
@@ -50,6 +65,10 @@ class Stack
     def value
       @value
     end
+
+    def map_value_with(a_block)
+      a_block.call(@value)
+    end
   end
 
   class EmptyNode
@@ -60,6 +79,10 @@ class Stack
 
     def value
       raise @error_message
+    end
+
+    def map_value_with(*)
+      value
     end
   end
 
