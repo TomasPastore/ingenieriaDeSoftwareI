@@ -12,15 +12,11 @@ class Stack
   end
 
   def pop   
-    @stack.last.call_with_value lambda {
-      |value|
-      @stack.pop
-      return value
-    }
+    @stack.pop.value
   end
 
   def top
-    @stack.last.call_with_value lambda {|value| return value}
+    @stack.last.value
   end
 
   def empty?
@@ -40,7 +36,7 @@ class Stack
   end
 
   module NodeInterface
-    def call_with_value(*)
+    def value
       raise "Should be implemented by subclass"
     end
   end
@@ -51,8 +47,8 @@ class Stack
       @value = anObject
     end
 
-    def call_with_value(aProc)
-      aProc.call @value
+    def value
+      @value
     end
   end
 
@@ -62,7 +58,7 @@ class Stack
       @error_message = error_message_to_raise
     end
 
-    def call_with_value(aProc)
+    def value
       raise @error_message
     end
   end
