@@ -4,27 +4,40 @@ class Stack
   @@stack_empty_error_description = "No element found"
 
   def initialize
-    @stack = [EmptyNode.new(@@stack_empty_error_description)]
+    #@stack = [EmptyNode.new(@@stack_empty_error_description)]
+    @stack = []
+
+    class << @stack
+      def pop_with_default
+        self.last ? self.pop :  EmptyNode.new(@@stack_empty_error_description)
+      end
+
+      def top_with_default
+        self.last ? self.last :  EmptyNode.new(@@stack_empty_error_description) 
+      end
+    end
+    
   end
+
 
   def push(an_object)
     @stack << (NodeWithValue.new an_object)
   end
 
   def pop   
-    @stack.pop.value
+    @stack.pop_with_default.value
   end
 
   def top
-    @stack.last.value
+    @stack.top_with_default.value
   end
 
   def empty?
-    @stack.size == 1
+    @stack.empty?
   end
 
   def size
-    @stack.size - 1
+    @stack.size
   end
 
   def self.stack_empty_error_description
