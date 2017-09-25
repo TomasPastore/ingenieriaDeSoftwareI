@@ -98,11 +98,11 @@ class Entero(Numero):
         return Entero (self._valor / divisorEntero.valor())
             
     def maximoComunDivisorCon(self,otroEntero): 
-        if otroEntero.esCero(): 
-            return self
-        else:
-            return otroEntero.maximoComunDivisorCon(self.restoCon(otroEntero))
-
+        return otroEntero.maximoComunDivisorAux(self)
+    
+    def maximoComunDivisorAux(self,otroEntero):
+        return self.restoCon(otroEntero).maximoComunDivisorCon(otroEntero) 
+        
     def restoCon(self, divisor):
         return Entero (self._valor % divisor.valor());
 

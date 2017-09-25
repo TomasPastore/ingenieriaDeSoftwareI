@@ -36,6 +36,12 @@ class Portfolio < SummarizingAccount
   end
 
   def add_account(account)
+    #self.assert_it_is_not_managed_and_does_not_manage_others_inside(account)
     @accounts.push account
   end
+
+  def assert_it_is_not_managed_and_does_not_manage_others_inside(account)
+    raise self.ACCOUNT_ALREADY_MANAGED if self.manages account or @accounts.any? {|accountInside| account.manages accountInside}
+  end
+
 end
