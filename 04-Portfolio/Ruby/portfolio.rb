@@ -12,7 +12,6 @@ class Portfolio < SummarizingAccount
     a_portfolio.add_account account1
     a_portfolio.add_account account2
     a_portfolio
-    #This could be refactored...
   end
 
   def balance
