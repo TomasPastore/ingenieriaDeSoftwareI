@@ -8,7 +8,6 @@ class Portfolio < SummarizingAccount
 
   def self.create_with(account1,account2)
     a_portfolio = Portfolio.new
-    #raise self.ACCOUNT_ALREADY_MANAGED if account1.manages account2 or account2.manages account1
     a_portfolio.add_account account1
     a_portfolio.add_account account2
     a_portfolio
