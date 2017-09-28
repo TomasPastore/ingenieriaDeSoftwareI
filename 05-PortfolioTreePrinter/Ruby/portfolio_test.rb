@@ -271,18 +271,6 @@ class PortfolioTest < Minitest::Test
     assert_equal(-150, account_transfer_net(toAccount))
   end
 
-  #Por supuesto que esto no va acá, pero creo que es la idea
-  #TODO: Mover a un archivo
-  class TransferNet
-        def initialize(account)
-            @account = account
-        end
-
-        def call
-            @account.transactions.inject(0){ |neto, transaction| transaction.affect_transferNet(neto)}        
-        end
-    end
-
   def account_transfer_net(account)
     
     TransferNet.new(account).call

@@ -1,4 +1,5 @@
 require './transaction'
+require './query.rb'
 
 class Balance < Query
   
