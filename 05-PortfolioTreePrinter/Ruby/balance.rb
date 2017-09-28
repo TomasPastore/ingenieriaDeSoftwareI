@@ -1,4 +1,3 @@
-require './transaction'
 require './query.rb'
 
 class Balance < Query
@@ -7,7 +6,7 @@ class Balance < Query
   	@account = account
   end
 
-  def consult(account)
+  def consult
    	value = 0
     @account.transactions.each do |transaction| value + transaction.consult(self) end
   	value

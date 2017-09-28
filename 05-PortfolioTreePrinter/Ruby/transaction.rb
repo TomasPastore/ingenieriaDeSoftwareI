@@ -12,14 +12,6 @@ class Transaction
     self.should_implement
   end
 
-  def affect_balance(balance)
-  	self.should_implement
-  end
-
-  def affect_transferNet(trasnfer_net)
-  	self.should_implement
-  end
-
   def consult(query)
   	self.should_implement
   end	

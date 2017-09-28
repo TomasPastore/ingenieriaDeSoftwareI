@@ -1,4 +1,5 @@
 require './summarizing_account'
+require './balance'
 
 class ReceptiveAccount < SummarizingAccount
 
@@ -11,7 +12,8 @@ class ReceptiveAccount < SummarizingAccount
   end
 
   def balance
-    @transactions.inject(0) { |accumulator, transaction| transaction.affect_balance(accumulator) }
+    balance = Balance.new(self)
+    balance.consult
   end
 
   def registers(transaction)

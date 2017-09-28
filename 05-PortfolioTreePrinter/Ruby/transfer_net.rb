@@ -1,4 +1,3 @@
-require './transaction'
 require './query.rb'
 
 class TransferNet < Query
@@ -7,7 +6,7 @@ class TransferNet < Query
         @account = account
     end
 
-    def consult(account)
+    def consult
         value = 0
         @account.transactions.each do |transaction| value + transaction.consult(self) end
            value

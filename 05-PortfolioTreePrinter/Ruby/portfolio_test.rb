@@ -272,14 +272,7 @@ class PortfolioTest < Minitest::Test
   end
 
   def account_transfer_net(account)
-    
-    TransferNet.new(account).call
-
-    #Creo que esto no se puede hacer, me parece que no puede haber lógica de negocios acá.
-    #Creo que la idea es hacer algo como lo de arriba... Aunque no estoy seguro
-    #Tampoco entiendo bien si se pueden modificar las transacciones (las clases) o no.
-    
-    #account.transactions.inject(0){ |neto, transaction| transaction.affect_transferNet(neto)}
+    TransferNet.new(account).consult
   end
 
   def test_21CertificateOfDepositShouldWithdrawInvestmentValue
