@@ -18,5 +18,9 @@ class Transaction
 
   def affect_transferNet(trasnfer_net)
   	self.should_implement
+  end
+
+  def consult(query)
+  	self.should_implement
   end	
 end

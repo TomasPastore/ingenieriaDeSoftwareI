@@ -15,7 +15,7 @@ class TransferenceDeposit < Transaction
 
   def value
     @value
-  end
+  end  
 
   def affect_balance(balance)
   	balance + @value

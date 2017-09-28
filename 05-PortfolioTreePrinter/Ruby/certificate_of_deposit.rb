@@ -5,4 +5,15 @@ class CertificateOfDeposit < Transaction
     self.should_implement
   end
 
+  def initialize(value)
+    @value = value
+  end
+
+  def value
+    @value
+  end
+
+  
+  def consult()
+
 end
