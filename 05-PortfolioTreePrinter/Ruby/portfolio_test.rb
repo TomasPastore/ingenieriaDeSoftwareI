@@ -3,6 +3,7 @@ require './withdraw'
 require './transfer'
 require './certificate_of_deposit'
 require './receptive_account'
+require './receptive_account_printer'
 require './portfolio'
 require 'minitest/autorun'
 require 'minitest/reporters'
@@ -30,7 +31,7 @@ class PortfolioTest < Minitest::Test
     assert_equal(50,account.balance)
   end
 
-  '''
+  
   def test_04PortfolioBalanceIsSumOfManagedAccountsBalance
     account1 = ReceptiveAccount.new 
     account2 = ReceptiveAccount.new 
@@ -253,7 +254,8 @@ class PortfolioTest < Minitest::Test
   end
 
   def account_summary_lines(fromAccount)
-    self.should_implement
+    aReceptiveAccountPrinter = ReceptiveAccountPrinter.new(fromAccount) 
+    aReceptiveAccountPrinter.print_account_summary_lines
   end
 
   def test_20ShouldBeAbleToBeQueryTransferNet
@@ -270,7 +272,7 @@ class PortfolioTest < Minitest::Test
   end
 
   def account_transfer_net(account)
-    self.should_implement
+    account.transactions.inject(0){ |neto, transaction| transaction.affect_transferNet(neto)}
   end
 
   def test_21CertificateOfDepositShouldWithdrawInvestmentValue
@@ -289,7 +291,7 @@ class PortfolioTest < Minitest::Test
   def investment_net(account)
     self.should_implement
   end
-
+'''
   def test_22ShouldBeAbleToQueryInvestmentEarnings
     account = ReceptiveAccount.new
 

@@ -13,4 +13,12 @@ class Withdraw < Transaction
   	balance - @value
   end
 
+  def affect_transferNet(trasnfer_net)
+    trasnfer_net + 0
+  end 
+
+  def description
+    "Extracción por #{@value}"
+  end
+
 end
