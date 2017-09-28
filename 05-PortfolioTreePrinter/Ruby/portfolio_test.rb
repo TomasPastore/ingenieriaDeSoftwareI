@@ -271,8 +271,27 @@ class PortfolioTest < Minitest::Test
     assert_equal(-150, account_transfer_net(toAccount))
   end
 
+  #Por supuesto que esto no va acá, pero creo que es la idea
+  #TODO: Mover a un archivo
+  class TransferNet
+        def initialize(account)
+            @account = account
+        end
+
+        def call
+            @account.transactions.inject(0){ |neto, transaction| transaction.affect_transferNet(neto)}        
+        end
+    end
+
   def account_transfer_net(account)
-    account.transactions.inject(0){ |neto, transaction| transaction.affect_transferNet(neto)}
+    
+    TransferNet.new(account).call
+
+    #Creo que esto no se puede hacer, me parece que no puede haber lógica de negocios acá.
+    #Creo que la idea es hacer algo como lo de arriba... Aunque no estoy seguro
+    #Tampoco entiendo bien si se pueden modificar las transacciones (las clases) o no.
+    
+    #account.transactions.inject(0){ |neto, transaction| transaction.affect_transferNet(neto)}
   end
 
   def test_21CertificateOfDepositShouldWithdrawInvestmentValue
