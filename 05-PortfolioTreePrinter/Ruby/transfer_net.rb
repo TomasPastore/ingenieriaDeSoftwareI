@@ -8,7 +8,7 @@ class TransferNet < Query
 
     def consult
         value = 0
-        @account.transactions.each do |transaction| value + transaction.consult(self) end
+        @account.transactions.each do |transaction| value += transaction.consult(self) end
            value
     end
 

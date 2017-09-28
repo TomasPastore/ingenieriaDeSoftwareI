@@ -1,6 +1,6 @@
 require './query.rb'
 
-class InvestmentNet < Query
+class InvestmentEarnings < Query
 
     def initialize(account)
         @account = account
@@ -13,6 +13,6 @@ class InvestmentNet < Query
     end
 
     def affect_query_with_certificate_of_deposit(certificate_of_deposit)
-       certificate_of_deposit.value
+       certificate_of_deposit.value*(certificate_of_deposit.tna / 360.0) * certificate_of_deposit.days  
     end
 end

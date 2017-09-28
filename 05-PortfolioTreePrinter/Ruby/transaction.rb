@@ -15,4 +15,8 @@ class Transaction
   def consult(query)
   	self.should_implement
   end	
+
+  def description
+    self.should_implement
+  end
 end

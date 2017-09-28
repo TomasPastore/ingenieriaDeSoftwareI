@@ -1,6 +1,9 @@
 require './deposit'
 require './withdraw'
 require './transfer'
+require './transfer_net'
+require './investment_net'
+require './investment_earnings'
 require './certificate_of_deposit'
 require './receptive_account'
 require './receptive_account_printer'
@@ -282,6 +285,7 @@ class PortfolioTest < Minitest::Test
     Deposit.register_for_on(1000,account)
     Withdraw.register_for_on(50,account)
     Transfer.register(100,account, toAccount)
+
     CertificateOfDeposit.register_for_on(100,30,0.1,account)
 
     assert_equal(100, investment_net(account))
@@ -289,9 +293,9 @@ class PortfolioTest < Minitest::Test
   end
 
   def investment_net(account)
-    self.should_implement
+    InvestmentNet.new(account).consult
   end
-'''
+
   def test_22ShouldBeAbleToQueryInvestmentEarnings
     account = ReceptiveAccount.new
 
@@ -304,7 +308,7 @@ class PortfolioTest < Minitest::Test
   end
 
   def investment_earnings(account)
-    self.should_implement
+    InvestmentEarnings.new(account).consult
   end
 
   def test_23AccountSummaryShouldWorkWithCertificateOfDeposit
@@ -339,6 +343,7 @@ class PortfolioTest < Minitest::Test
     assert_equal(-150,self.account_transfer_net(toAccount))
   end
 
+'''
   def test_25PortfolioTreePrinter
     account1 = ReceptiveAccount.new
     account2 = ReceptiveAccount.new
