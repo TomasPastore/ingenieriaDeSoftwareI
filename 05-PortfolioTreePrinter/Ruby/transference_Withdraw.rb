@@ -17,12 +17,8 @@ class TransferenceWithdraw < Transaction
     @value
   end
 
-  def affect_balance(balance)
-  	balance - @value
-  end
-
-  def affect_transferNet(trasnfer_net)
-  	trasnfer_net - @value
+  def consult(query)
+  	query.affect_query_with_transference_withdraw(self)
   end	
 
   def transfer
