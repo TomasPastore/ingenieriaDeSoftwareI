@@ -50,6 +50,7 @@ class CabinDoor
 
   #Boton de abrir
   def open_button_pressed
+    @state = @state.goto_opening
     unless self.is_opening?
       @motor.stop if self.is_closing?
       @state = :opening
