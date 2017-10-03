@@ -58,10 +58,10 @@ class ElevatorController:
         return self.cabinCurrentFloor 
 
     def isCabinGoingUp(self):
-        return self.nextFloor() >= self.cabinFloorNumber()
+        return self.nextFloor() > self.cabinFloorNumber()
 
     def isCabinGoingDown(self):
-        return self.nextFloor() <= self.cabinFloorNumber() 
+        return self.nextFloor() < self.cabinFloorNumber() 
     
     def callsLeft(self):
         return len(self.calls) != 0
@@ -104,9 +104,7 @@ class ElevatorController:
             raise ElevatorEmergency(self.__class__.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
 
     def cabinDoorOpened(self):
-        if self.callsLeft():
-            self.calls.pop(0)
-        
+
         if self.noCallsLeft():
             self.elevatorState = "idle"
         
@@ -127,7 +125,8 @@ class ElevatorController:
         
                     self.cabinState = "stopped"
                     self.openCabinDoor()
-                    self.waitForPeople()  
+                    self.waitForPeople()
+                    self.calls.pop(0)  
 
         else:
             
