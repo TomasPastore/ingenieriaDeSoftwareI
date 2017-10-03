@@ -10,13 +10,20 @@
 import unittest
     
 class ElevatorController:
+
+    CABIN_SENSORS_NOT_SYNCHRONIZED = "Sensor de cabina desincronizado"
+    CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED = "Sensor de puerta desincronizado"
+
     def __init__(self):
         self.elevatorState = "idle"
         self.cabinState = "stopped"
         self.cabinDoorState = "opened"
         self.cabinCurrentFloor = 0
         self.calls = []
-    #Crear un objeto elevador    
+        self.waitingForPeople = False
+        
+    ## Observadores de estados ##  
+
     def isIdle(self):
         return self.elevatorState == "idle"
 
@@ -41,29 +48,166 @@ class ElevatorController:
     def isCabinDoorClosing(self):
         return self.cabinDoorState == "closing"
 
-    def cabinDoorClosed(self):
-        self.cabinDoorState = "closed"
-        self.cabinDoorState = "moving"
+    def isCabinWaitingForPeople(self):
+        return self.waitingForPeople
+
+    
+    ## Otros observadores ##
 
     def cabinFloorNumber(self):
         return self.cabinCurrentFloor 
 
-    def goUpPushedFromFloor(self, floor):
-        self.elevatorState = "working"
+    def isCabinGoingUp(self):
+        return self.nextFloor() > self.cabinFloorNumber()
+
+    def isCabinGoingDown(self):
+        return self.nextFloor() < self.cabinFloorNumber() 
+    
+    def callsLeft(self):
+        return len(self.calls) != 0
+
+    def noCallsLeft(self):
+        return not self.callsLeft()
+
+    def nextFloor(self):
+        if self.callsLeft():
+            return self.calls[0]
+        else: 
+            return "No calls left"
+
+    def isInQueue(self, aFloor):
+        for floor_i in self.calls:
+            if floor_i == aFloor :
+                return True
+        return False
+
+    ## Chequeos para levantar excepciones
+
+    def isCabinFalling(self, floor):
+        return self.cabinFloorNumber() > floor and floor < self.nextFloor()
+
+    def isCabingGoingInWrongDirection(self, floor):
+        return self.isCabinFalling(floor) or (self.cabinFloorNumber() < floor and floor > self.nextFloor())
+    
+    def isCabinSkippingFloors(self, floor):
+        return (self.isCabinGoingUp() and floor-1 != self.cabinFloorNumber()) or (self.isCabinGoingDown() and floor+1 != self.cabinFloorNumber())
+    
+    
+    ## SENALES ##
+
+    def cabinDoorClosed(self):
+        
+        if self.isCabinDoorClosing():
+            self.cabinState = "moving"
+            self.cabinDoorState = "closed"
+        else:
+            raise ElevatorEmergency(self.__class__.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
+
+    def cabinDoorOpened(self):
+
+        if self.noCallsLeft():
+            self.elevatorState = "idle"
+        
         self.cabinState = "stopped"
-        self.cabinDoorState = "closing"
-        self.calls.append(floor)
+        self.cabinDoorState = "opened"
 
     def cabinOnFloor(self, floor):
-        if not len(self.calls) == 0 and self.calls[0] == floor :
-            self.elevatorState = "working"
-            self.cabinState = "stopped"
-            self.cabinDoorState = "opening"    
+        
+        if self.isCabinMoving():
+            assert(self.callsLeft())
+            
+            if self.isCabinSkippingFloors(floor) or self.isCabingGoingInWrongDirection(floor):
+                raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
+            else:
+                self.updateCurrentFloor(floor)
+
+                if floor == self.nextFloor() :
+        
+                    self.cabinState = "stopped"
+                    self.openCabinDoor()
+                    self.waitForPeople()
+                    self.calls.pop(0)  
+
         else:
-            pass
+            
+            if not self.cabinFloorNumber() == floor:
+                raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
+
+
+    def waitForPeopleTimedOut(self):
+        self.waitingForPeople = False
+
+        if self.noCallsLeft() :
+            self.elevatorState = "idle"
+        
+        else:
+            self.closeCabinDoor()
+
+
+    ## ACCIONES 
+    
+    def goUpPushedFromFloor(self, aFloor):
+        if self.isIdle():
+            self.elevatorState = "working"
+            self.cabinDoorState = "closing"
+
+        self.addCallFromFloor(aFloor)
+
+    def openCabinDoor(self):
+        if (self.isCabinDoorClosed() or self.isCabinDoorClosing()) and self.isCabinStopped():
+            self.cabinDoorState = "opening"
+    
+    def closeCabinDoor(self):  
+        if self.isCabinDoorOpened() and self.isWorking() :
+            self.cabinDoorState = "closing"
+            if self.isCabinWaitingForPeople():
+                self.waitingForPeople = False
+
+    def updateCurrentFloor(self, floor):
+        self.cabinCurrentFloor = floor
+
+    def waitForPeople(self):
+        self.waitingForPeople = True
+
+    def addCallFromFloor(self, aFloor):
+        if not self.isInQueue(aFloor) :
+
+            if self.noCallsLeft(): 
+                self.calls.append(aFloor)
+
+            elif self.isCabinStopped() and self.cabinFloorNumber() == aFloor: #estoy parado en ese piso  
+                if self.isCabinDoorClosing:
+                    self.openCabinDoor()
+    
+            elif self.isCabinGoingDown():
+                if aFloor < self.cabinFloorNumber():
+                    self.decreasingOrderInsert(aFloor)
+                else :
+                    self.increasingOrderInsert(aFloor)
+
+            elif self.isCabinGoingUp(): 
+                if aFloor > self.cabinFloorNumber():
+                    self.increasingOrderInsert(aFloor)
+                else: 
+                    self.decreasingOrderInsert(aFloor)
+
+    def decreasingOrderInsert(self, aFloor):
+        pos = 0
+        while ( pos < len(self.calls) and self.calls[pos] > aFloor ):
+            pos += 1
+        self.calls.insert(pos, aFloor)           
+
+    def increasingOrderInsert(self, aFloor):
+        pos = 0
+        while ( pos < len(self.calls) and self.calls[pos] < aFloor ):
+            pos += 1
+        self.calls.insert(pos, aFloor)
 
 class ElevatorEmergency(Exception):
-    pass
+    
+    def __init__(self, message):
+        self.message = message
+
 
 class ElevatorTest(unittest.TestCase):
 
@@ -159,7 +303,7 @@ class ElevatorTest(unittest.TestCase):
         elevatorController.openCabinDoor()
 
         self.assertTrue(elevatorController.isCabinDoorOpened())
-
+        
     def test07DoorMustBeOpenedWhenCabinIsStoppedAndClosingDoors(self):
         elevatorController = ElevatorController()
     
@@ -305,7 +449,7 @@ class ElevatorTest(unittest.TestCase):
         self.assertTrue(elevatorController.isCabinStopped())
         self.assertTrue(elevatorController.isCabinDoorOpening())
 
-    
+
     # STOP HERE!!
 
     def test16ElevatorHasToEnterEmergencyIfStoppedAndOtherFloorSensorTurnsOn(self):
@@ -369,7 +513,6 @@ class ElevatorTest(unittest.TestCase):
         except ElevatorEmergency as elevatorEmergency:
             self.assertTrue (elevatorEmergency.message == "Sensor de puerta desincronizado")
         
-    
 
     def test21ElevatorHasToEnterEmergencyIfDoorClosesWhenOpening(self):
         elevatorController = ElevatorController()
@@ -445,7 +588,6 @@ class ElevatorTest(unittest.TestCase):
         self.assertTrue(elevatorController.isCabinStopped())
         self.assertTrue(elevatorController.isCabinDoorClosing())
     
-
 
 if __name__ == '__main__':
     unittest.main()
