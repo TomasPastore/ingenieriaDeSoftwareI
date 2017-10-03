@@ -156,11 +156,11 @@ class ElevatorController:
 
     def openCabinDoor(self):
         if (self.isCabinDoorClosed() or self.isCabinDoorClosing()) and self.isCabinStopped():
-            self.cabinDoorState = "opening"
-    
+            self.cabin.openCommandIssued()
+
     def closeCabinDoor(self):  
         if self.isCabinDoorOpened() and self.isWorking() :
-            self.cabinDoorState = "closing"
+            self.cabin.closeCommandIssued()
             if self.isCabinWaitingForPeople():
                 self.waitingForPeople = False
 
