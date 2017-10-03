@@ -8,6 +8,8 @@
 # California, 94041, USA.
 #  
 import unittest
+from cabindoor import CabinDoor
+from cabin import Cabin
     
 class ElevatorController:
 
@@ -16,7 +18,7 @@ class ElevatorController:
 
     def __init__(self):
         self.elevatorState = "idle"
-        self.cabinState = "stopped"
+        self.cabin = Cabin()
         self.cabinDoorState = "opened"
         self.cabinCurrentFloor = 0
         self.calls = []
@@ -31,22 +33,22 @@ class ElevatorController:
         return self.elevatorState == "working"
 
     def isCabinStopped(self):
-        return self.cabinState == "stopped"
+        return self.cabin.isStopped()
 
     def isCabinMoving(self):
-        return self.cabinState == "moving"
+        return self.cabin.isMoving()
 
     def isCabinDoorOpened(self):
-        return self.cabinDoorState == "opened"
+        return self.cabin.isDoorOpened()
 
     def isCabinDoorOpening(self):
-        return self.cabinDoorState == "opening"
+        return self.cabin.isDoorOpening()
 
     def isCabinDoorClosed(self):
-        return self.cabinDoorState == "closed"
+        return self.cabin.isDoorClosed()
 
     def isCabinDoorClosing(self):
-        return self.cabinDoorState == "closing"
+        return self.cabin.isDoorClosing()
 
     def isCabinWaitingForPeople(self):
         return self.waitingForPeople
@@ -98,8 +100,8 @@ class ElevatorController:
     def cabinDoorClosed(self):
         
         if self.isCabinDoorClosing():
-            self.cabinState = "moving"
-            self.cabinDoorState = "closed"
+            self.cabin.doorIsClosed()
+            self.cabin.move()
         else:
             raise ElevatorEmergency(self.__class__.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
 
@@ -108,8 +110,7 @@ class ElevatorController:
         if self.noCallsLeft():
             self.elevatorState = "idle"
         
-        self.cabinState = "stopped"
-        self.cabinDoorState = "opened"
+        self.cabin.doorIsOpened()
 
     def cabinOnFloor(self, floor):
         
@@ -123,8 +124,8 @@ class ElevatorController:
 
                 if floor == self.nextFloor() :
         
-                    self.cabinState = "stopped"
-                    self.openCabinDoor()
+                    self.cabin.stop()
+                    self.cabin.openCommandIssued()
                     self.waitForPeople()
                     self.calls.pop(0)  
 
@@ -149,7 +150,7 @@ class ElevatorController:
     def goUpPushedFromFloor(self, aFloor):
         if self.isIdle():
             self.elevatorState = "working"
-            self.cabinDoorState = "closing"
+            self.cabin.closeCommandIssued()
 
         self.addCallFromFloor(aFloor)
 
