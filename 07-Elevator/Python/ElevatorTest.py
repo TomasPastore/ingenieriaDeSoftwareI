@@ -19,7 +19,6 @@ class ElevatorController:
     def __init__(self):
         self.elevatorState = "idle"
         self.cabin = Cabin()
-        self.cabinDoorState = "opened"
         self.cabinCurrentFloor = 0
         self.calls = []
         self.waitingForPeople = False
@@ -98,7 +97,9 @@ class ElevatorController:
     ## SENALES ##
 
     def cabinDoorClosed(self):
-        
+        #Este if es dudoso... ¿Tiene sentido que la puerta pueda tirar un ElevatorEmergency?
+        #¿Deberían quizás llamarse ElevatorCabin y ElevatorCabinDoor?
+        #¿O se podrá tirar un DoorException, agarrarla con catch y relanzarla...
         if self.isCabinDoorClosing():
             self.cabin.doorIsClosed()
             self.cabin.move()
@@ -106,7 +107,7 @@ class ElevatorController:
             raise ElevatorEmergency(self.__class__.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
 
     def cabinDoorOpened(self):
-
+        #Este if parece fácil de sacar con polimorfismo
         if self.noCallsLeft():
             self.elevatorState = "idle"
         
