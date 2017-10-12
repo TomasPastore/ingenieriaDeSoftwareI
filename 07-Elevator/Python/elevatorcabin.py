@@ -1,16 +1,19 @@
 #For Python this file uses encoding: utf-8
 
 import unittest
-from cabindoor import CabinDoor
-from ElevatorTest import ElevatorEmergency
+from elevatorcabindoor import ElevatorCabinDoor
+
 #^ eso es provicional... En sí se me ocurre la opción de que el ElevatorController les pase la clase... Pero no sé
 
-class Cabin(object):
+class ElevatorCabin(object):
     def __init__(self):
-        self.MOVING = MovingCabinState()
+        self.MOVING_UP = MovingUpCabinState()
+        self.MOVING_DOWN = MovingDownCabinState()
         self.STOPPED = StoppedCabinState()
         self._state = self.STOPPED
-        self._door = CabinDoor()
+        self._door = ElevatorCabinDoor()
+        self._currentFloor = 0
+
     def isStopped(self):
         return self._state.is_stopped()
     def isMoving(self):
@@ -27,8 +30,10 @@ class Cabin(object):
         self._door.closed_sensor_signal()
     def doorIsOpened(self):
         self._door.opened_sensor_signal()
-    def move(self):
-        self._state.goto_moving(self)
+    def currentFloor(self):
+    	self._currentFloor
+    def moveUp(self):
+        self._state.goto_moving_up(self)
     def stop(self):
         self._state.goto_stopped(self)
     def closeCommandIssued(self):
@@ -47,9 +52,9 @@ class Cabin(object):
 
 class CabinState:
     def is_stopped(self):
-        return False
+        self.should_be_implemented_by_subclass()
     def is_moving(self):
-        return False
+        self.should_be_implemented_by_subclass()
     def goto_moving(self,cabin):
         self.should_be_implemented_by_subclass()
     def goto_stopped(self,cabin):
@@ -60,6 +65,8 @@ class CabinState:
 class MovingCabinState(CabinState):
     def is_moving(self):
         return True
+    def is_stopped(self):
+        return False
     def goto_moving(self,cabin):
         cabin.goto_moving_from_moving()
     def goto_stopped(self,cabin):
@@ -67,6 +74,8 @@ class MovingCabinState(CabinState):
 
 
 class StoppedCabinState(CabinState):
+    def is_moving(self):
+        return False
     def is_stopped(self):
         return True
     def goto_moving(self,cabin):

@@ -11,26 +11,34 @@
 import unittest
 from cabindoor import CabinDoor
 from cabin import Cabin
+from elevatoremergency import ElevatorEmergency
+from pendingfloorsrecord import PendingFloorsRecord
+
     
 class ElevatorController:
 
-    CABIN_SENSORS_NOT_SYNCHRONIZED = "Sensor de cabina desincronizado"
-    CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED = "Sensor de puerta desincronizado"
+    #Lo hardcodeamos porque sino habria que pasarlo en el constructor y cambiaria los tests.
+    NUMBER_OF_FLOORS_DEFAULT = 50
 
     def __init__(self):
-        self.elevatorState = "idle"
-        self.cabin = Cabin()
-        self.cabinCurrentFloor = 0
-        self.calls = []
+
+        self.IDLE = IdleElevatorState()
+        self.WORKING = WorkingElevatorState()
+
+        self.elevatorState = self.IDLE
+
+        self.cabin = ElevatorCabin()
         self.waitingForPeople = False
+
+        self.pendingFloors = PendingFloorsRecord(self.__class__.NUMBER_OF_FLOORS_DEFAULT)
         
     ## Observadores de estados ##  
 
     def isIdle(self):
-        return self.elevatorState == "idle"
+        return self.elevatorState.isIdle()
 
     def isWorking(self):
-        return self.elevatorState == "working"
+        return self.elevatorState.isWorking()
 
     def isCabinStopped(self):
         return self.cabin.isStopped()
@@ -51,13 +59,13 @@ class ElevatorController:
         return self.cabin.isDoorClosing()
 
     def isCabinWaitingForPeople(self):
-        return self.waitingForPeople
-
+        return self.cabin.isWaitingForPeople()
+        #return self.cabin.waitingForPeople()
     
     ## Otros observadores ##
 
     def cabinFloorNumber(self):
-        return self.cabinCurrentFloor 
+        return self.cabin.currentFloor() 
 
     def isCabinGoingUp(self):
         return self.nextFloor() > self.cabinFloorNumber()
@@ -65,6 +73,7 @@ class ElevatorController:
     def isCabinGoingDown(self):
         return self.nextFloor() < self.cabinFloorNumber() 
     
+    #Revisar si lo abstraemos
     def callsLeft(self):
         return len(self.calls) != 0
 
@@ -88,8 +97,13 @@ class ElevatorController:
     def isCabinFalling(self, floor):
         return self.cabinFloorNumber() > floor and floor < self.nextFloor()
 
+    #El caso contrario a falling, deberia bajar pero esta yendo para arriba, puede no ser una
+    #emergencia, pero seguro que esta andando mal asi que que se baje la gente.
+    def isCabinLaunching(self, floor):
+        return self.cabinFloorNumber() < floor and floor > self.nextFloor()
+
     def isCabingGoingInWrongDirection(self, floor):
-        return self.isCabinFalling(floor) or (self.cabinFloorNumber() < floor and floor > self.nextFloor())
+        return self.isCabinFalling(floor) or self.isCabinLaunching(floor)
     
     def isCabinSkippingFloors(self, floor):
         return (self.isCabinGoingUp() and floor-1 != self.cabinFloorNumber()) or (self.isCabinGoingDown() and floor+1 != self.cabinFloorNumber())
@@ -101,11 +115,9 @@ class ElevatorController:
         #Este if es dudoso... ¿Tiene sentido que la puerta pueda tirar un ElevatorEmergency?
         #¿Deberían quizás llamarse ElevatorCabin y ElevatorCabinDoor?
         #¿O se podrá tirar un DoorException, agarrarla con catch y relanzarla...
-        if self.isCabinDoorClosing():
-            self.cabin.doorIsClosed()
-            self.cabin.move()
-        else:
-            raise ElevatorEmergency(self.__class__.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
+        self.cabin.doorIsClosed()
+        self.cabin.move()
+        #    raise ElevatorEmergency(self.__class__.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
 
     def cabinDoorOpened(self):
         #Este if parece fácil de sacar con polimorfismo
@@ -185,6 +197,7 @@ class ElevatorController:
                     self.openCabinDoor()
     
             elif self.isCabinGoingDown():
+
                 if aFloor < self.cabinFloorNumber():
                     self.decreasingOrderInsert(aFloor)
                 else :
@@ -208,10 +221,45 @@ class ElevatorController:
             pos += 1
         self.calls.insert(pos, aFloor)
 
-class ElevatorEmergency(Exception):
-    
-    def __init__(self, message):
-        self.message = message
+
+
+class ElevatorState:
+
+  def gotoWorking(self,anElevatorController):
+    self.shouldBeImplementedBySubclass()
+  def gotoIdle(self,anElevatorController):
+    self.shouldBeImplementedBySubclass()
+  def isWorking(self):
+    self.shouldBeImplementedBySubclass()
+  def isIdle(self):
+    self.shouldBeImplementedBySubclass()
+  def shouldBeImplementedBySubclass():
+    raise NotImplementedError("Subclass responsibility")
+
+class WorkingElevatorState(ElevatorState):
+
+  def gotoWorking(self,anElevatorController):
+    anElevatorController.gotoWorkingFromWorking()
+  def gotoIdle(self,anElevatorController):
+    anElevatorController.gotoIdleFromWorking()
+  def isWorking(self):
+    return True
+  def isIdle(self):
+    return False
+
+class IdleElevatorState(ElevatorState):
+
+  def gotoWorking(self,anElevatorController):
+    anElevatorController.gotoWorkingFromIdle()
+  def gotoIdle(self,anElevatorController):
+    anElevatorController.gotoIdleFromIdle()
+  def isWorking(self):
+    return False
+  def isIdle(self):
+    return True
+
+
+
 
 
 class ElevatorTest(unittest.TestCase):
