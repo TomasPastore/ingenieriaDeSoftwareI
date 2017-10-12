@@ -2,6 +2,7 @@
 
 import unittest
 from elevatorcabindoor import ElevatorCabinDoor
+from elevatoremergency import ElevatorEmergency
 
 #^ eso es provicional... En sí se me ocurre la opción de que el ElevatorController les pase la clase... Pero no sé
 
@@ -41,11 +42,17 @@ class ElevatorCabin(object):
     def closeCommandIssued(self):
         self._door.close_button_pressed()
     def openCommandIssued(self):
-        if self.isMoving():
-            raise Exception("Killer - No se puede abrir en movimiento")
+        self._state.open_command_issued()
 
+    def open_command_when_stopped():
         self._door.open_button_pressed()
+
+    def open_command_when_moving():
+        raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
+    
+
     def updateCurrentFloor(floor):
+        
         if self.currentFloor() != floor:
             raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
         self.currentFloor = floor
@@ -55,7 +62,6 @@ class ElevatorCabin(object):
         if self.isCabinSkippingFloors(floor) or self.isCabingGoingInWrongDirection(floor):
             raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
         else:
-
 
 
 
@@ -104,6 +110,8 @@ class MovingUpCabinState(CabinState):
         cabin.goto_moving_down_from_moving_up()
     def goto_stopped(self,cabin):
         cabin.goto_stopped_from_moving()
+    def open_command_issued(self,cabin):
+        cabin.open_command_when_moving()
 
 class MovingDownCabinState(CabinState):
     def is_moving(self):
@@ -116,6 +124,8 @@ class MovingDownCabinState(CabinState):
         cabin.goto_moving_down_from_moving_down()
     def goto_stopped(self,cabin):
         cabin.goto_stopped_from_moving()
+    def open_command_issued(self,cabin):
+        cabin.open_command_when_moving()
 
 class StoppedCabinState(CabinState):
     def is_moving(self):
@@ -126,6 +136,8 @@ class StoppedCabinState(CabinState):
         cabin.goto_moving_from_stopped()
     def goto_stopped(self,cabin):
         cabin.goto_stopped_from_stopped()
+    def open_command_issued(self,cabin):
+        cabin.open_command_when_stoppped()
 
 class CabinTests(unittest.TestCase):
     def test01CabinStartsStopped(self):

@@ -231,9 +231,6 @@ class IdleElevatorState(ElevatorState):
         return True
 
 
-
-
-
 class ElevatorTest(unittest.TestCase):
 
     def test01ElevatorStartsIdleWithDoorOpenOnFloorZero(self):
