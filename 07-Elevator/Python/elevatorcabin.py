@@ -76,6 +76,9 @@ class ElevatorCabin(object):
         #Se puede responder isSkippingFloors desde acá, seguro...
         #Pero no sé si tiene sentido que SKIPPINGFLOORS y GOINGINWRONGDIRECTION sean estados :s
         #Casi que me parece que tiene más sentido que sean estados del controller... Aunque tampoco
+        #Quizás si hacemos un EmergencyState... Y juntamos estos dos ors en ese estado
+        #Aunque en ese caso creo que ya no harían falta realmente los estados de UP y DOWN
+
         if self.isCabinSkippingFloors(floor) or self.isCabingGoingInWrongDirection(floor):
             raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
         else:
