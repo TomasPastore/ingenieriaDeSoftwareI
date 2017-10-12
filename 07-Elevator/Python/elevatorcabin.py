@@ -44,6 +44,18 @@ class ElevatorCabin(object):
     def openCommandIssued(self):
         self._state.open_command_issued()
 
+    def isSkippingFloors(floor):
+        self._state.is_skipping_floors(self,floor)
+
+    def is_skipping_when_moving_up(floor):
+        return floor-1 != self.currentFloor
+
+    def is_skipping_when_moving_down(floor):
+        return floor+1 != self.currentFloor
+
+    def is_skipping_when_stopped(floor):
+        return False
+
     def open_command_when_stopped():
         self._door.open_button_pressed()
 
@@ -58,6 +70,11 @@ class ElevatorCabin(object):
         self.currentFloor = floor
 
         if floor == self.nextFloor() :
+
+        #No estoy seguro de que esto realmente vaya acá :s
+        #No es un estado de la cabina, creo :s
+        #Se puede responder isSkippingFloors desde acá, seguro...
+        #Pero no sé si tiene sentido que SKIPPINGFLOORS y GOINGINWRONGDIRECTION sean estados :s
 
         if self.isCabinSkippingFloors(floor) or self.isCabingGoingInWrongDirection(floor):
             raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
@@ -112,6 +129,9 @@ class MovingUpCabinState(CabinState):
         cabin.goto_stopped_from_moving()
     def open_command_issued(self,cabin):
         cabin.open_command_when_moving()
+    def is_skipping_floors(self,a_cabin,floor):
+        a_cabin.is_skipping_when_moving_down(floor)
+
 
 class MovingDownCabinState(CabinState):
     def is_moving(self):
@@ -126,6 +146,8 @@ class MovingDownCabinState(CabinState):
         cabin.goto_stopped_from_moving()
     def open_command_issued(self,cabin):
         cabin.open_command_when_moving()
+    def is_skipping_floors(self,a_cabin,floor):
+        a_cabin.is_skipping_when_moving_down(floor)
 
 class StoppedCabinState(CabinState):
     def is_moving(self):
@@ -138,6 +160,9 @@ class StoppedCabinState(CabinState):
         cabin.goto_stopped_from_stopped()
     def open_command_issued(self,cabin):
         cabin.open_command_when_stoppped()
+    def is_skipping_floors(self,a_cabin,floor):
+        a_cabin.is_skipping_when_stopped(floor)
+
 
 class CabinTests(unittest.TestCase):
     def test01CabinStartsStopped(self):
