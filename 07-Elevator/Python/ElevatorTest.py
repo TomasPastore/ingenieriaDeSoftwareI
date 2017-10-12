@@ -17,9 +17,6 @@ from pendingfloorsrecord import PendingFloorsRecord
     
 class ElevatorController:
 
-    #Lo hardcodeamos porque sino habria que pasarlo en el constructor y cambiaria los tests.
-    NUMBER_OF_FLOORS_DEFAULT = 50
-
     def __init__(self):
 
         self.IDLE = IdleElevatorState()
@@ -29,7 +26,7 @@ class ElevatorController:
 
         self.cabin = ElevatorCabin()
 
-        self.pendingFloors = PendingFloorsRecord(self.__class__.NUMBER_OF_FLOORS_DEFAULT)
+        self.pendingFloors = PendingFloorsRecord()
         
     ## Observadores de estados ##  
 
@@ -71,7 +68,7 @@ class ElevatorController:
     def isCabinGoingDown(self):
         return self.cabin.isGoingDown() 
     
-    #Revisar si lo abstraemos
+
     def anyCallLeft(self):
         return self.pendingFloors.anyCallLeft()
 
@@ -81,22 +78,6 @@ class ElevatorController:
     def nextFloor(self):
         self.pendingFloors.nextFloor(self.cabin)
 
-    ## Chequeos para levantar excepciones
-
-    def isCabinFalling(self, floor):
-        return self.cabin.isFalling(floor)
-
-    #El caso contrario a falling, deberia bajar pero esta yendo para arriba, puede no ser una
-    #emergencia, pero seguro que esta andando mal asi que que se baje la gente.
-    def isCabinLaunching(self, floor):
-        return self.cabin.isLaunching(floor)
-
-    def isCabingGoingInWrongDirection(self, floor):
-        return self.isCabinFalling(floor) or self.isCabinLaunching(floor)
-    
-    def isCabinSkippingFloors(self, floor):
-        return self.cabin.isSkippingFloors(floor)
-    
     ## SENALES ##
 
     def cabinDoorClosed(self):
@@ -112,7 +93,7 @@ class ElevatorController:
         self.cabin.stop()
         self.cabin.openCommandIssued()
         self.cabin.waitForPeople()
-        self.pendingFloors.onFloor()  
+        self.pendingFloors.onFloor(floor)  
 
     def waitForPeopleTimedOut(self):
         self.cabin.waitForPeopleTimedOut()
@@ -121,7 +102,6 @@ class ElevatorController:
         #Pasar a Idle en esto ^
         
         self.closeCabinDoor()
-
 
     ## ACCIONES 
     
@@ -137,45 +117,14 @@ class ElevatorController:
     def closeCabinDoor(self):  
         self.elevatorState.closeCabinDoor(self)
 
-    def closeCabinDoorWhenWorking():d
+    def closeCabinDoorWhenWorking():
         self.cabin.closeCommandIssued()
 
 
     def addCallFromFloor(self, aFloor):
-        if not self.isInQueue(aFloor) :
-
-            if self.noCallsLeft(): 
-                self.calls.append(aFloor)
-
-            elif self.isCabinStopped() and self.cabinFloorNumber() == aFloor: #estoy parado en ese piso  
-                if self.isCabinDoorClosing:
-                    self.openCabinDoor()
-    
-            elif self.isCabinGoingDown():
-
-                if aFloor < self.cabinFloorNumber():
-                    self.decreasingOrderInsert(aFloor)
-                else :
-                    self.increasingOrderInsert(aFloor)
-
-            elif self.isCabinGoingUp(): 
-                if aFloor > self.cabinFloorNumber():
-                    self.increasingOrderInsert(aFloor)
-                else: 
-                    self.decreasingOrderInsert(aFloor)
-
-    def decreasingOrderInsert(self, aFloor):
-        pos = 0
-        while ( pos < len(self.calls) and self.calls[pos] > aFloor ):
-            pos += 1
-        self.calls.insert(pos, aFloor)           
-
-    def increasingOrderInsert(self, aFloor):
-        pos = 0
-        while ( pos < len(self.calls) and self.calls[pos] < aFloor ):
-            pos += 1
-        self.calls.insert(pos, aFloor)
-
+        
+        self.pendingFloors.addCallFromFloor(self, aFloor)
+        
     def gotoWorkingFromIdle(self):
         self.cabin.closeCommandIssued()
         self.elevatorState = self.WORKING
@@ -188,8 +137,6 @@ class ElevatorController:
 
     def gotoIdleFromIdle(self):
         pass    
-
-
 
 class ElevatorState:
 

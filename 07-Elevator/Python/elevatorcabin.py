@@ -1,4 +1,16 @@
 #For Python this file uses encoding: utf-8
+    '''
+    def openDoorIfSameFloor(self,aFloor):
+        self._state.openDoorIfSameFloor(self,aFloor)
+    
+    def open_door_if_same_floor_when_moving_up(self,floor):
+        pass
+    def open_door_if_same_floor_when_moving_down(self,floor):
+        pass
+    def open_door_if_same_floor_when_stopped(self,floor):
+        if floor == self.currentFloor()
+            self.open_button_pressed()
+       '''     
 
 import unittest
 from elevatorcabindoor import ElevatorCabinDoor
@@ -20,7 +32,11 @@ class ElevatorCabin(object):
     def isStopped(self):
         return self._state.is_stopped()
     def isMoving(self):
-        return self._state.is_moving()
+        return self.isMovingUp() or self.isMovingDown()
+    def isMovingUp(self):
+        return self._state.is_moving_up()
+    def isMovingDown(self):
+        return self._state.is_moving_down()
     def isDoorOpened(self):
         return self._door.is_opened()
     def isDoorOpening(self):
@@ -34,7 +50,7 @@ class ElevatorCabin(object):
     def doorIsOpened(self):
         self._door.opened_sensor_signal()
     def currentFloor(self):
-    	self._currentFloor
+        self._currentFloor
     def moveUp(self):
         self._state.goto_moving_up(self)
     def stop(self):
@@ -44,46 +60,36 @@ class ElevatorCabin(object):
     def openCommandIssued(self):
         self._state.open_command_issued()
 
-    def isSkippingFloors(floor):
-        self._state.is_skipping_floors(self,floor)
+    def assertNotSkippingFloors(floor):
+        self._state.assert_not_skipping_floors(self,floor)
 
-    def is_skipping_when_moving_up(floor):
-        return floor-1 != self.currentFloor
 
-    def is_skipping_when_moving_down(floor):
-        return floor+1 != self.currentFloor
+    def assert_not_skipping_when_moving_up(self, floor):
+        if floor != self.currentFloor+1:
+            raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
 
-    def is_skipping_when_stopped(floor):
-        return False
+    def assert_not_skipping_when_moving_down(self, floor):
+        if floor+1 != self.currentFloor:
+            raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
+
+    def assert_not_skipping_when_stopped(self, floor):
+        if self.currentFloor() != floor:
+            raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
+    
 
     def open_command_when_stopped():
         self._door.open_button_pressed()
 
-    def open_command_when_moving():
-        raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
+    def open_command_when_moving_up():
+        pass
+    def open_command_when_moving_down():
+        pass
     
 
+
     def updateCurrentFloor(floor):
-        
-        if self.currentFloor() != floor:
-            raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
+        self.assertNotSkippingFloors(floor) 
         self.currentFloor = floor
-
-        if floor == self.nextFloor() :
-
-        #No estoy seguro de que esto realmente vaya acá :s
-        #No es un estado de la cabina, creo :s
-        #Se puede responder isSkippingFloors desde acá, seguro...
-        #Pero no sé si tiene sentido que SKIPPINGFLOORS y GOINGINWRONGDIRECTION sean estados :s
-        #Casi que me parece que tiene más sentido que sean estados del controller... Aunque tampoco
-        #Quizás si hacemos un EmergencyState... Y juntamos estos dos ors en ese estado
-        #Aunque en ese caso creo que ya no harían falta realmente los estados de UP y DOWN
-
-        if self.isCabinSkippingFloors(floor) or self.isCabingGoingInWrongDirection(floor):
-            raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
-        else:
-
-
 
     def goto_moving_up_from_stopped(self):
         self._state = self.MOVING_UP
@@ -110,18 +116,27 @@ class ElevatorCabin(object):
 class CabinState:
     def is_stopped(self):
         self.should_be_implemented_by_subclass()
-    def is_moving(self):
+    def is_moving_up(self):
         self.should_be_implemented_by_subclass()
-    def goto_moving(self,cabin):
+    def is_moving_down(self):
         self.should_be_implemented_by_subclass()
+    def goto_moving_up(self,cabin):
+        self.should_be_implemented_by_subclass()
+    def goto_moving_down(self,cabin):
+        self.should_be_implemented_by_subclass()    
     def goto_stopped(self,cabin):
         self.should_be_implemented_by_subclass()
+    def assert_not_skipping_floors(self,floor)
+        self.should_be_implemented_by_subclass()
+    
     def should_be_implemented_by_subclass():
         raise NotImplementedError("Subclass responsibility")
 
 class MovingUpCabinState(CabinState):
-    def is_moving(self):
+    def is_moving_up(self):
         return True
+    def is_moving_down(self):
+        return False
     def is_stopped(self):
         return False
     def goto_moving_up(self,cabin):
@@ -129,15 +144,16 @@ class MovingUpCabinState(CabinState):
     def goto_moving_down(self,cabin):
         cabin.goto_moving_down_from_moving_up()
     def goto_stopped(self,cabin):
-        cabin.goto_stopped_from_moving()
+        cabin.goto_stopped_from_moving_up()
     def open_command_issued(self,cabin):
-        cabin.open_command_when_moving()
-    def is_skipping_floors(self,a_cabin,floor):
-        a_cabin.is_skipping_when_moving_down(floor)
-
+        cabin.open_command_when_moving_up()
+    def assert_not_skipping_floors(self,a_cabin,floor):
+        a_cabin.assert_not_skipping_floors_when_moving_up(floor)
 
 class MovingDownCabinState(CabinState):
-    def is_moving(self):
+    def is_moving_up(self):
+        return False
+    def is_moving_down(self):
         return True
     def is_stopped(self):
         return False
@@ -149,11 +165,13 @@ class MovingDownCabinState(CabinState):
         cabin.goto_stopped_from_moving()
     def open_command_issued(self,cabin):
         cabin.open_command_when_moving()
-    def is_skipping_floors(self,a_cabin,floor):
-        a_cabin.is_skipping_when_moving_down(floor)
-
+    def assert_not_skipping_floors(self,a_cabin,floor):
+        a_cabin.assert_not_skipping_floors_when_moving_down(floor)
+    
 class StoppedCabinState(CabinState):
-    def is_moving(self):
+    def is_moving_up(self):
+        return False
+    def is_moving_down(self):
         return False
     def is_stopped(self):
         return True
@@ -163,8 +181,8 @@ class StoppedCabinState(CabinState):
         cabin.goto_stopped_from_stopped()
     def open_command_issued(self,cabin):
         cabin.open_command_when_stoppped()
-    def is_skipping_floors(self,a_cabin,floor):
-        a_cabin.is_skipping_when_stopped(floor)
+    def assert_not_skipping_floors(self,a_cabin,floor):
+        a_cabin.assert_not_skipping_floors_when_stopped(floor)
 
 
 class CabinTests(unittest.TestCase):
