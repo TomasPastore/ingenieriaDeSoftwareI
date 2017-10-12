@@ -95,9 +95,7 @@ class ElevatorController:
         return self.isCabinFalling(floor) or self.isCabinLaunching(floor)
     
     def isCabinSkippingFloors(self, floor):
-        return (self.cabin.isGoingUp() and floor-1 != self.cabinFloorNumber()) or\
-               (self.cabin.isGoingDown() and floor+1 != self.cabinFloorNumber())
-    
+        return self.cabin.isSkippingFloors(floor)
     
     ## SENALES ##
 
