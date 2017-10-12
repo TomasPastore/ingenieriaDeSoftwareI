@@ -5,4 +5,4 @@ class PendingFloorsRecord():
 		self._record = [False] * numberOfFloors
 
 	def nextFloor(self, anElevator):
-		anElevator.
+		anElevator.currentFloor()

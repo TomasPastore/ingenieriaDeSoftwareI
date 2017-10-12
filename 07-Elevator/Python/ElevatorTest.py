@@ -28,7 +28,6 @@ class ElevatorController:
         self.elevatorState = self.IDLE
 
         self.cabin = ElevatorCabin()
-        self.waitingForPeople = False
 
         self.pendingFloors = PendingFloorsRecord(self.__class__.NUMBER_OF_FLOORS_DEFAULT)
         
@@ -60,7 +59,6 @@ class ElevatorController:
 
     def isCabinWaitingForPeople(self):
         return self.cabin.isWaitingForPeople()
-        #return self.cabin.waitingForPeople()
     
     ## Otros observadores ##
 
@@ -68,123 +66,79 @@ class ElevatorController:
         return self.cabin.currentFloor() 
 
     def isCabinGoingUp(self):
-        return self.nextFloor() > self.cabinFloorNumber()
+        return self.cabin.isGoingUp()
 
     def isCabinGoingDown(self):
-        return self.nextFloor() < self.cabinFloorNumber() 
+        return self.cabin.isGoingDown() 
     
     #Revisar si lo abstraemos
-    def callsLeft(self):
-        return len(self.calls) != 0
+    def anyCallLeft(self):
+        return self.pendingFloors.anyCallLeft()
 
     def noCallsLeft(self):
-        return not self.callsLeft()
+        return not self.anyCallLeft()
 
     def nextFloor(self):
-        if self.callsLeft():
-            return self.calls[0]
-        else: 
-            return "No calls left"
-
-    def isInQueue(self, aFloor):
-        for floor_i in self.calls:
-            if floor_i == aFloor :
-                return True
-        return False
+        self.pendingFloors.nextFloor(self.cabin)
 
     ## Chequeos para levantar excepciones
 
     def isCabinFalling(self, floor):
-        return self.cabinFloorNumber() > floor and floor < self.nextFloor()
+        return self.cabin.isFalling(floor)
 
     #El caso contrario a falling, deberia bajar pero esta yendo para arriba, puede no ser una
     #emergencia, pero seguro que esta andando mal asi que que se baje la gente.
     def isCabinLaunching(self, floor):
-        return self.cabinFloorNumber() < floor and floor > self.nextFloor()
+        return self.cabin.isLaunching(floor)
 
     def isCabingGoingInWrongDirection(self, floor):
         return self.isCabinFalling(floor) or self.isCabinLaunching(floor)
     
     def isCabinSkippingFloors(self, floor):
-        return (self.isCabinGoingUp() and floor-1 != self.cabinFloorNumber()) or (self.isCabinGoingDown() and floor+1 != self.cabinFloorNumber())
+        return (self.cabin.isGoingUp() and floor-1 != self.cabinFloorNumber()) or\
+               (self.cabin.isGoingDown() and floor+1 != self.cabinFloorNumber())
     
     
     ## SENALES ##
 
     def cabinDoorClosed(self):
-        #Este if es dudoso... ¿Tiene sentido que la puerta pueda tirar un ElevatorEmergency?
-        #¿Deberían quizás llamarse ElevatorCabin y ElevatorCabinDoor?
-        #¿O se podrá tirar un DoorException, agarrarla con catch y relanzarla...
         self.cabin.doorIsClosed()
-        self.cabin.move()
-        #    raise ElevatorEmergency(self.__class__.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
+        self.cabin.goToNextFloor(self.pendingFloors.nextFloor())
 
     def cabinDoorOpened(self):
-        #Este if parece fácil de sacar con polimorfismo
-        if self.noCallsLeft():
-            self.elevatorState = "idle"
-        
         self.cabin.doorIsOpened()
+        self.pendingFloors.doorIsOpened(self)
 
     def cabinOnFloor(self, floor):
-        #Con double dispatch se debería poder sacar esto, teniendo estados como en los otros
-        if self.isCabinMoving():
-            assert(self.callsLeft())
-            
-            if self.isCabinSkippingFloors(floor) or self.isCabingGoingInWrongDirection(floor):
-                raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
-            else:
-                self.updateCurrentFloor(floor)
-
-                if floor == self.nextFloor() :
-        
-                    self.cabin.stop()
-                    self.cabin.openCommandIssued()
-                    self.waitForPeople()
-                    self.calls.pop(0)  
-
-        else:
-            #Este no sé, creo que no se puede sacar... A menos que modelemos todos los pisos posibles...
-            #Lo cuál me parece ridículo, onda, hacer una lista de pisos... No sé
-            if not self.cabinFloorNumber() == floor:
-                raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
-
+        self.cabin.updateCurrentFloor(floor)
+        self.cabin.stop()
+        self.cabin.openCommandIssued()
+        self.cabin.waitForPeople()
+        self.pendingFloors.onFloor()  
 
     def waitForPeopleTimedOut(self):
-        self.waitingForPeople = False
+        self.cabin.waitForPeopleTimedOut()
 
-        if self.noCallsLeft() :
-            self.elevatorState = "idle"
+        self.pendingFloors.waitForPeopleTimedOut(self)
+        #Pasar a Idle en esto ^
         
-        else:
-            self.closeCabinDoor()
+        self.closeCabinDoor()
 
 
     ## ACCIONES 
     
     def goUpPushedFromFloor(self, aFloor):
-        #Esto creo que con estados se puede sacar...
-        if self.isIdle():
-            self.elevatorState = "working"
-            self.cabin.closeCommandIssued()
+        
+        self.elevatorState.gotoWorking()
 
         self.addCallFromFloor(aFloor)
 
     def openCabinDoor(self):
-        if self.isCabinStopped():
-            self.cabin.openCommandIssued()
+        self.cabin.openCommandIssued()
 
     def closeCabinDoor(self):  
         if self.isCabinDoorOpened() and self.isWorking() :
             self.cabin.closeCommandIssued()
-            if self.isCabinWaitingForPeople():
-                self.waitingForPeople = False
-
-    def updateCurrentFloor(self, floor):
-        self.cabinCurrentFloor = floor
-
-    def waitForPeople(self):
-        self.waitingForPeople = True
 
     def addCallFromFloor(self, aFloor):
         if not self.isInQueue(aFloor) :
@@ -220,6 +174,19 @@ class ElevatorController:
         while ( pos < len(self.calls) and self.calls[pos] < aFloor ):
             pos += 1
         self.calls.insert(pos, aFloor)
+
+    def gotoWorkingFromIdle(self):
+        self.cabin.closeCommandIssued()
+        self.elevatorState = self.WORKING
+
+    def gotoWorkingFromWorking(self):
+        pass    
+
+    def gotoIdleFromWorking(self):
+        self.elevatorState = self.IDLE
+
+    def gotoIdleFromIdle(self):
+        pass    
 
 
 

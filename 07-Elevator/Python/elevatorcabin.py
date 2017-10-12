@@ -14,6 +14,8 @@ class ElevatorCabin(object):
         self._door = ElevatorCabinDoor()
         self._currentFloor = 0
 
+    def waitForPeopleTimedOut():
+        self._door.wait_for_people_timed_out()
     def isStopped(self):
         return self._state.is_stopped()
     def isMoving(self):
@@ -39,16 +41,45 @@ class ElevatorCabin(object):
     def closeCommandIssued(self):
         self._door.close_button_pressed()
     def openCommandIssued(self):
-        self._door.open_button_pressed()
+        if self.isMoving():
+            raise Exception("Killer - No se puede abrir en movimiento")
 
-    def goto_moving_from_stopped(self):
-        self._state = self.MOVING
-    def goto_stopped_from_moving(self):
+        self._door.open_button_pressed()
+    def updateCurrentFloor(floor):
+        if self.currentFloor() != floor:
+            raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
+        self.currentFloor = floor
+
+        if floor == self.nextFloor() :
+
+        if self.isCabinSkippingFloors(floor) or self.isCabingGoingInWrongDirection(floor):
+            raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
+        else:
+
+
+
+
+    def goto_moving_up_from_stopped(self):
+        self._state = self.MOVING_UP
+    def goto_moving_up_from_moving_up(self):
+        pass
+    def goto_moving_up_from_moving_down(self):
+        raise ElevatorEmergency(ElevatorEmergency.CABIN_SENSORS_NOT_SYNCHRONIZED)
+    
+    def goto_moving_down_from_stopped(self):
+        self._state = self.MOVING_DOWN
+    def goto_moving_down_from_moving_down(self):
+        pass
+    def goto_moving_down_from_moving_up(self):
+        raise ElevatorEmergency(ElevatorEmergency.CABIN_SENSORS_NOT_SYNCHRONIZED)
+
+    def goto_stopped_from_moving_up(self):
         self._state = self.STOPPED
-    def goto_moving_from_moving(self):
-        raise Exception("Already moving")
+    def goto_stopped_from_moving_down(self):
+        self._state = self.STOPPED
     def goto_stopped_from_stopped(self):
-        raise Exception("Already stopped")
+        pass
+
 
 class CabinState:
     def is_stopped(self):
@@ -62,16 +93,29 @@ class CabinState:
     def should_be_implemented_by_subclass():
         raise NotImplementedError("Subclass responsibility")
 
-class MovingCabinState(CabinState):
+class MovingUpCabinState(CabinState):
     def is_moving(self):
         return True
     def is_stopped(self):
         return False
-    def goto_moving(self,cabin):
-        cabin.goto_moving_from_moving()
+    def goto_moving_up(self,cabin):
+        cabin.goto_moving_up_from_moving_up()
+    def goto_moving_down(self,cabin):
+        cabin.goto_moving_down_from_moving_up()
     def goto_stopped(self,cabin):
         cabin.goto_stopped_from_moving()
 
+class MovingDownCabinState(CabinState):
+    def is_moving(self):
+        return True
+    def is_stopped(self):
+        return False
+    def goto_moving_up(self,cabin):
+        cabin.goto_moving_up_from_moving_down()
+    def goto_moving_down(self,cabin):
+        cabin.goto_moving_down_from_moving_down()
+    def goto_stopped(self,cabin):
+        cabin.goto_stopped_from_moving()
 
 class StoppedCabinState(CabinState):
     def is_moving(self):
