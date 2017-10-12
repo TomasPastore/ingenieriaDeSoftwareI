@@ -1,4 +1,9 @@
 #For Python this file uses encoding: utf-8
+
+from ElevatorTest import ElevatorEmergency
+#^ eso es provicional... En sí se me ocurre la opción de que el ElevatorController les pase la clase... Pero no sé
+#O sea, es feo porque pone una dependencia entre los archivos, cosa que no está buena :s
+
 class CabinDoor(object):
 
   def __init__(self):
@@ -57,6 +62,9 @@ class CabinDoor(object):
 
   def go_from_opening_to_closing(self):
     self._state = self.CLOSING
+
+  def go_from_opening_to_opening(self):
+    pass
 
   def go_from_closed_to_opening(self):
     self._state = self.OPENING

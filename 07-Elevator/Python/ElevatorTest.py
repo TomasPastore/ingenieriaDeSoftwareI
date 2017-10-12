@@ -1,3 +1,4 @@
+#This file uses encoding: utf-8
 #
 # Developed by 10Pines SRL
 # License: 
@@ -114,7 +115,7 @@ class ElevatorController:
         self.cabin.doorIsOpened()
 
     def cabinOnFloor(self, floor):
-        
+        #Con double dispatch se debería poder sacar esto, teniendo estados como en los otros
         if self.isCabinMoving():
             assert(self.callsLeft())
             
@@ -131,7 +132,8 @@ class ElevatorController:
                     self.calls.pop(0)  
 
         else:
-            
+            #Este no sé, creo que no se puede sacar... A menos que modelemos todos los pisos posibles...
+            #Lo cuál me parece ridículo, onda, hacer una lista de pisos... No sé
             if not self.cabinFloorNumber() == floor:
                 raise ElevatorEmergency(self.__class__.CABIN_SENSORS_NOT_SYNCHRONIZED)
 
@@ -149,6 +151,7 @@ class ElevatorController:
     ## ACCIONES 
     
     def goUpPushedFromFloor(self, aFloor):
+        #Esto creo que con estados se puede sacar...
         if self.isIdle():
             self.elevatorState = "working"
             self.cabin.closeCommandIssued()
@@ -156,7 +159,7 @@ class ElevatorController:
         self.addCallFromFloor(aFloor)
 
     def openCabinDoor(self):
-        if (self.isCabinDoorClosed() or self.isCabinDoorClosing()) and self.isCabinStopped():
+        if self.isCabinStopped():
             self.cabin.openCommandIssued()
 
     def closeCabinDoor(self):  

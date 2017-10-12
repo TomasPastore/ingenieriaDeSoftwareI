@@ -1,5 +1,9 @@
+#For Python this file uses encoding: utf-8
+
 import unittest
 from cabindoor import CabinDoor
+from ElevatorTest import ElevatorEmergency
+#^ eso es provicional... En sí se me ocurre la opción de que el ElevatorController les pase la clase... Pero no sé
 
 class Cabin(object):
     def __init__(self):
