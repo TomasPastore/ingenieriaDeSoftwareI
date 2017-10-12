@@ -137,8 +137,11 @@ class ElevatorController:
         self.cabin.openCommandIssued()
 
     def closeCabinDoor(self):  
-        if self.isCabinDoorOpened() and self.isWorking() :
-            self.cabin.closeCommandIssued()
+        self.elevatorState.closeCabinDoor(self)
+
+    def closeCabinDoorWhenWorking():d
+        self.cabin.closeCommandIssued()
+
 
     def addCallFromFloor(self, aFloor):
         if not self.isInQueue(aFloor) :
@@ -192,38 +195,40 @@ class ElevatorController:
 
 class ElevatorState:
 
-  def gotoWorking(self,anElevatorController):
-    self.shouldBeImplementedBySubclass()
-  def gotoIdle(self,anElevatorController):
-    self.shouldBeImplementedBySubclass()
-  def isWorking(self):
-    self.shouldBeImplementedBySubclass()
-  def isIdle(self):
-    self.shouldBeImplementedBySubclass()
-  def shouldBeImplementedBySubclass():
-    raise NotImplementedError("Subclass responsibility")
+    def gotoWorking(self,anElevatorController):
+        self.shouldBeImplementedBySubclass()
+    def gotoIdle(self,anElevatorController):
+        self.shouldBeImplementedBySubclass()
+    def isWorking(self):
+        self.shouldBeImplementedBySubclass()
+    def isIdle(self):
+        self.shouldBeImplementedBySubclass()
+    def shouldBeImplementedBySubclass():
+        raise NotImplementedError("Subclass responsibility")
 
 class WorkingElevatorState(ElevatorState):
 
-  def gotoWorking(self,anElevatorController):
-    anElevatorController.gotoWorkingFromWorking()
-  def gotoIdle(self,anElevatorController):
-    anElevatorController.gotoIdleFromWorking()
-  def isWorking(self):
-    return True
-  def isIdle(self):
-    return False
+    def gotoWorking(self,anElevatorController):
+        anElevatorController.gotoWorkingFromWorking()
+    def gotoIdle(self,anElevatorController):
+        anElevatorController.gotoIdleFromWorking()
+    def closeCabinDoor(self,anElevatorController):
+        anElevatorController.closeCabinDoorWhenWorking()
+    def isWorking(self):
+        return True
+    def isIdle(self):
+        return False
 
 class IdleElevatorState(ElevatorState):
 
-  def gotoWorking(self,anElevatorController):
-    anElevatorController.gotoWorkingFromIdle()
-  def gotoIdle(self,anElevatorController):
-    anElevatorController.gotoIdleFromIdle()
-  def isWorking(self):
-    return False
-  def isIdle(self):
-    return True
+    def gotoWorking(self,anElevatorController):
+        anElevatorController.gotoWorkingFromIdle()
+    def gotoIdle(self,anElevatorController):
+        anElevatorController.gotoIdleFromIdle()
+    def isWorking(self):
+        return False
+    def isIdle(self):
+        return True
 
 
 
