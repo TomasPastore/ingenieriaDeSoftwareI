@@ -22,111 +22,114 @@ class ElevatorController:
         self.IDLE = IdleElevatorState()
         self.WORKING = WorkingElevatorState()
 
-        self.elevatorState = self.IDLE
+        self._elevatorState = self.IDLE
 
-        self.cabin = ElevatorCabin()
+        self._cabin = ElevatorCabin()
 
-        self.pendingFloors = PendingFloorsRecord()
+        self._pendingFloors = PendingFloorsRecord()
         
     ## Observadores de estados ##  
 
     def isIdle(self):
-        return self.elevatorState.isIdle()
+        return self.elevatorState().isIdle()
     def isWorking(self):
-        return self.elevatorState.isWorking()
+        return self.elevatorState().isWorking()
 
     def isCabinStopped(self):
-        return self.cabin.isStopped()
+        return self._cabin.isStopped()
     def isCabinMoving(self):
-        return self.cabin.isMoving()
+        return self._cabin.isMoving()
     def isCabinGoingUp(self):
-        return self.cabin.isGoingUp()
+        return self._cabin.isGoingUp()
     def isCabinGoingDown(self):
-        return self.cabin.isGoingDown() 
+        return self._cabin.isGoingDown() 
     
 
     def isCabinDoorOpened(self):
-        return self.cabin.isDoorOpened()
+        return self._cabin.isDoorOpened()
     def isCabinDoorOpening(self):
-        return self.cabin.isDoorOpening()
+        return self._cabin.isDoorOpening()
     def isCabinDoorClosed(self):
-        return self.cabin.isDoorClosed()
+        return self._cabin.isDoorClosed()
     def isCabinDoorClosing(self):
-        return self.cabin.isDoorClosing()
+        return self._cabin.isDoorClosing()
     def isCabinWaitingForPeople(self):
-        return self.cabin.isWaitingForPeople()
+        return self._cabin.isWaitingForPeople()
     
     ## Otros observadores ##
     def cabin(self):
-        return cabin
+        return self._cabin
     def elevatorState(self):
-        return elevatorState
+        return self._elevatorState
     def pendingFloors(self):
-        return pendingFloors
+        return self._pendingFloors
 
     def cabinFloorNumber(self):
-        return self.cabin.currentFloor() 
+        return self._cabin.floorNumber()
     def nextFloor(self):
-        self.pendingFloors.nextFloor()
+        return self.pendingFloors().nextFloor()
 
     def howShouldIAdd(self,aPendingFloorsRecord,aFloor):
-        return self.cabin.protocolToAdd(self,aFloor)
+        return self._cabin.protocolToAdd(self,aFloor)
 
-    def protocolToAddWhenGoingDownAndFloorIsDownwards(self):
-        return "DECREASING_ORDER" 
-    def protocolToAddWhenGoingDownAndFloorIsUpwards(self):
-        return "INCREASING_ORDER" 
-    def protocolToAddWhenGoingUpAndFloorIsDownwards(self): 
-        return "DECREASING_ORDER" 
-    def protocolToAddWhenGoingUpAndFloorIsUpwards(self): 
-        return "INCREASING_ORDER"
-
+    def protocolToAddWhenFloorIsDownwards(self):
+        order = "DECREASING_ORDER" 
+        return order
+    def protocolToAddWhenFloorIsUpwards(self):
+        order = "INCREASING_ORDER" 
+        return order
+    
     ## SENALES ##
 
     def cabinDoorClosed(self):
-        self.cabin.doorIsClosed()
+        self._cabin.doorIsClosed()
+        self._cabin.gotoFloor(self.pendingFloors().nextFloor())
+
     def cabinDoorOpened(self):
-        self.cabin.doorIsOpened()
+        self._cabin.doorIsOpened()
+        self._pendingFloors.doorIsOpened(self)
 
     def cabinOnFloor(self, floor):
-        self.cabin.onFloor(floor)
-        self.cabin.stop()
-        self.cabin.openDoor()
-        self.cabin.waitForPeople()
-        self.pendingFloors.onFloor(floor)  
+        self._cabin.onFloor(floor)
+        self.pendingFloors().onFloor(self,floor)  
+        
+    def arrivedToNextFloorSignal(self):
+        self._cabin.stop()
+        self._cabin.openDoor()
 
     def waitForPeopleTimedOut(self):
-        self.cabin.waitForPeopleTimedOut()
-        self.pendingFloors.waitForPeopleTimedOut(self)
+        self._cabin.waitForPeopleTimedOut()
+        self.pendingFloors().waitForPeopleTimedOut(self)
         self.closeCabinDoor()
 
     ## ACCIONES 
 
     def openCabinDoor(self):
-        self.cabin.openDoor()
+        self._cabin.openDoor()
     def closeCabinDoor(self):  
-        self.cabin.closeDoor()
+        self._elevatorState.tellMeToCloseIfNotIdle(self)
 
-    def closeCabinDoorWhenWorking():
-        self.cabin.closeDoor()
+    def closeCabinDoorCauseNotIdle(self):
+        self._cabin.closeDoor()
     
     def goUpPushedFromFloor(self, aFloor):
-        self.elevatorState.gotoWorking(self)
-        self.pendingFloors.addCallFromFloor(self, aFloor)
+        self.elevatorState().gotoWorking(self)
+        self.pendingFloors().addCallFromFloor(self, aFloor)
+        self._cabin.closeDoor()
 
     #CAMBIOS DE ESTADO
 
     def gotoWorking(self):
-        self.elevatorState.gotoWorking(self)
+        self.elevatorState().gotoWorking(self)
     def gotoIdle(self):
-        self.elevatorState.gotoIdle(self)
+        self.elevatorState().gotoIdle(self)
 
     def gotoWorkingFromIdle(self):
-        self.elevatorState = self.WORKING
+        self._elevatorState = self.WORKING
     def gotoWorkingFromWorking(self):
         pass    
     def gotoIdleFromWorking(self):
-        self.elevatorState = self.IDLE
+        self._elevatorState = self.IDLE
     def gotoIdleFromIdle(self):
         pass    
 
@@ -140,7 +143,10 @@ class ElevatorState:
         self.shouldBeImplementedBySubclass()
     def isIdle(self):
         self.shouldBeImplementedBySubclass()
-    def shouldBeImplementedBySubclass():
+    def tellMeToCloseIfNotIdle(self,anElevatorController):
+        self.shouldBeImplementedBySubclass()
+
+    def shouldBeImplementedBySubclass(self):
         raise NotImplementedError("Subclass responsibility")
 
 class WorkingElevatorState(ElevatorState):
@@ -149,12 +155,12 @@ class WorkingElevatorState(ElevatorState):
         anElevatorController.gotoWorkingFromWorking()
     def gotoIdle(self,anElevatorController):
         anElevatorController.gotoIdleFromWorking()
-    def closeCabinDoor(self,anElevatorController):
-        anElevatorController.closeCabinDoorWhenWorking()
     def isWorking(self):
         return True
     def isIdle(self):
         return False
+    def tellMeToCloseIfNotIdle(self,anElevatorController):
+        anElevatorController.closeCabinDoorCauseNotIdle()
 
 class IdleElevatorState(ElevatorState):
 
@@ -166,7 +172,8 @@ class IdleElevatorState(ElevatorState):
         return False
     def isIdle(self):
         return True
-
+    def tellMeToCloseIfNotIdle(self,anElevatorController):
+        pass
 
 class ElevatorTest(unittest.TestCase):
 

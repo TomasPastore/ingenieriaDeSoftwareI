@@ -27,6 +27,8 @@ class ElevatorCabinDoor(object):
     return self._state.is_closing()
   def is_closed(self):
     return self._state.is_closed()
+  def is_waiting_for_people(self):
+    return self._state.is_waiting_for_people()
 
   #Cambios de estado
   def open_button_pressed(self):
@@ -38,12 +40,12 @@ class ElevatorCabinDoor(object):
   def closed_sensor_signal(self):
     self._state.goto_closed(self)
   def wait_for_people_timed_out(self):
-    self._state.goto_opened_and_not_waiting(self)
+    self._state.goto_closing(self)
 
   def go_from_opening_to_opening(self):
     pass
   def go_from_opening_to_opened_and_not_waiting(self):
-    raise ElevatorEmergency(KILLER_MACHINE)
+    raise ElevatorEmergency(ElevatorEmergency.KILLER_MACHINE)
   def go_from_opening_to_opened_and_waiting(self):
     self._state = self.OPENED_AND_WAITING
   def go_from_opening_to_closing(self):
@@ -58,7 +60,7 @@ class ElevatorCabinDoor(object):
   def go_from_opened_and_waiting_to_opened_and_not_waiting(self):
     self._state = self.OPENED_AND_NOT_WAITING
   def go_from_opened_and_waiting_to_closing(self):
-    pass
+    self._state = self.CLOSING
   def go_from_opened_and_waiting_to_closed(self):
     raise ElevatorEmergency(ElevatorEmergency.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
 
@@ -74,11 +76,11 @@ class ElevatorCabinDoor(object):
     raise ElevatorEmergency(ElevatorEmergency.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
 
   def go_from_closing_to_opening(self):
-    self._state = self.OPENING  ##Revisar pero creo que lo testean asi
+    self._state = self.OPENING  ##Test 7
   def go_from_closing_to_opened_and_waiting(self):
-    raise ElevatorEmergency(CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
+    raise ElevatorEmergency(ElevatorEmergency.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
   def go_from_closing_to_opened_and_not_waiting(self):
-    raise ElevatorEmergency(CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
+    raise ElevatorEmergency(ElevatorEmergency.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
   def go_from_closing_to_closing(self):
     pass
   def go_from_closing_to_closed(self):
@@ -87,13 +89,13 @@ class ElevatorCabinDoor(object):
   def go_from_closed_to_opening(self):
     self._state = self.OPENING
   def go_from_closed_to_opened_and_waiting(self):
-    raise ElevatorEmergency(CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
+    raise ElevatorEmergency(ElevatorEmergency.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
   def go_from_closed_to_opened_and_not_waiting(self):
-    raise ElevatorEmergency(CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
+    raise ElevatorEmergency(ElevatorEmergency.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
   def go_from_closed_to_closing(self):
     pass
   def go_from_closed_to_closed(self):
-  	pass
+  	raise ElevatorEmergency(ElevatorEmergency.CABIN_DOOR_SENSORS_NOT_SYNCHRONIZED)
   	
 
 class DoorState:
@@ -116,8 +118,10 @@ class DoorState:
     self.should_be_implemented_by_subclass()
   def is_closed(self):
     self.should_be_implemented_by_subclass()
+  def is_waiting_for_people(self):
+    self.should_be_implemented_by_subclass()
 
-  def should_be_implemented_by_subclass():
+  def should_be_implemented_by_subclass(self):
     raise NotImplementedError("Subclass responsibility")
 
 
@@ -145,6 +149,8 @@ class OpenedAndWaitingDoorState(OpenedDoorState):
     return False
   def is_closed(self):
     return False
+  def is_waiting_for_people(self):
+    return True
 
 class OpenedAndNotWaitingDoorState(OpenedDoorState):
 
@@ -165,6 +171,8 @@ class OpenedAndNotWaitingDoorState(OpenedDoorState):
   def is_closing(self):
     return False
   def is_closed(self):
+    return False
+  def is_waiting_for_people(self):
     return False
 
 class ClosedDoorState(DoorState):
@@ -187,6 +195,8 @@ class ClosedDoorState(DoorState):
     return False
   def is_closed(self):
     return True
+def is_waiting_for_people(self):
+    return False
 
 class OpeningDoorState(DoorState):
   
@@ -208,6 +218,8 @@ class OpeningDoorState(DoorState):
     return False
   def is_closed(self):
     return False
+  def is_waiting_for_people(self):
+    return False
 
 class ClosingDoorState(DoorState):
 
@@ -228,4 +240,6 @@ class ClosingDoorState(DoorState):
   def is_closing(self):
     return True
   def is_closed(self):
+    return False
+  def is_waiting_for_people(self):
     return False
