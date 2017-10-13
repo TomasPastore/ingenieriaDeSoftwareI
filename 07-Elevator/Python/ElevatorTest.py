@@ -9,8 +9,8 @@
 # California, 94041, USA.
 #  
 import unittest
-from cabindoor import CabinDoor
-from cabin import Cabin
+from elevatorcabindoor import ElevatorCabinDoor
+from elevatorcabin import ElevatorCabin
 from elevatoremergency import ElevatorEmergency
 from pendingfloorsrecord import PendingFloorsRecord
 
@@ -32,109 +32,101 @@ class ElevatorController:
 
     def isIdle(self):
         return self.elevatorState.isIdle()
-
     def isWorking(self):
         return self.elevatorState.isWorking()
 
     def isCabinStopped(self):
         return self.cabin.isStopped()
-
     def isCabinMoving(self):
         return self.cabin.isMoving()
-
-    def isCabinDoorOpened(self):
-        return self.cabin.isDoorOpened()
-
-    def isCabinDoorOpening(self):
-        return self.cabin.isDoorOpening()
-
-    def isCabinDoorClosed(self):
-        return self.cabin.isDoorClosed()
-
-    def isCabinDoorClosing(self):
-        return self.cabin.isDoorClosing()
-
-    def isCabinWaitingForPeople(self):
-        return self.cabin.isWaitingForPeople()
-    
-    ## Otros observadores ##
-
-    def cabinFloorNumber(self):
-        return self.cabin.currentFloor() 
-
     def isCabinGoingUp(self):
         return self.cabin.isGoingUp()
-
     def isCabinGoingDown(self):
         return self.cabin.isGoingDown() 
     
 
-    def anyCallLeft(self):
-        return self.pendingFloors.anyCallLeft()
+    def isCabinDoorOpened(self):
+        return self.cabin.isDoorOpened()
+    def isCabinDoorOpening(self):
+        return self.cabin.isDoorOpening()
+    def isCabinDoorClosed(self):
+        return self.cabin.isDoorClosed()
+    def isCabinDoorClosing(self):
+        return self.cabin.isDoorClosing()
+    def isCabinWaitingForPeople(self):
+        return self.cabin.isWaitingForPeople()
+    
+    ## Otros observadores ##
+    def cabin(self):
+        return cabin
+    def elevatorState(self):
+        return elevatorState
+    def pendingFloors(self):
+        return pendingFloors
 
-    def noCallsLeft(self):
-        return not self.anyCallLeft()
-
+    def cabinFloorNumber(self):
+        return self.cabin.currentFloor() 
     def nextFloor(self):
-        self.pendingFloors.nextFloor(self.cabin)
+        self.pendingFloors.nextFloor()
+
+    def howShouldIAdd(self,aPendingFloorsRecord,aFloor):
+        return self.cabin.protocolToAdd(self,aFloor)
+
+    def protocolToAddWhenGoingDownAndFloorIsDownwards(self):
+        return "DECREASING_ORDER" 
+    def protocolToAddWhenGoingDownAndFloorIsUpwards(self):
+        return "INCREASING_ORDER" 
+    def protocolToAddWhenGoingUpAndFloorIsDownwards(self): 
+        return "DECREASING_ORDER" 
+    def protocolToAddWhenGoingUpAndFloorIsUpwards(self): 
+        return "INCREASING_ORDER"
 
     ## SENALES ##
 
     def cabinDoorClosed(self):
         self.cabin.doorIsClosed()
-        self.cabin.goToNextFloor(self.pendingFloors.nextFloor())
-
     def cabinDoorOpened(self):
         self.cabin.doorIsOpened()
-        self.pendingFloors.doorIsOpened(self)
 
     def cabinOnFloor(self, floor):
-        self.cabin.updateCurrentFloor(floor)
+        self.cabin.onFloor(floor)
         self.cabin.stop()
-        self.cabin.openCommandIssued()
+        self.cabin.openDoor()
         self.cabin.waitForPeople()
         self.pendingFloors.onFloor(floor)  
 
     def waitForPeopleTimedOut(self):
         self.cabin.waitForPeopleTimedOut()
-
         self.pendingFloors.waitForPeopleTimedOut(self)
-        #Pasar a Idle en esto ^
-        
         self.closeCabinDoor()
 
     ## ACCIONES 
-    
-    def goUpPushedFromFloor(self, aFloor):
-        
-        self.elevatorState.gotoWorking()
-
-        self.addCallFromFloor(aFloor)
 
     def openCabinDoor(self):
-        self.cabin.openCommandIssued()
-
+        self.cabin.openDoor()
     def closeCabinDoor(self):  
-        self.elevatorState.closeCabinDoor(self)
+        self.cabin.closeDoor()
 
     def closeCabinDoorWhenWorking():
-        self.cabin.closeCommandIssued()
-
-
-    def addCallFromFloor(self, aFloor):
-        
+        self.cabin.closeDoor()
+    
+    def goUpPushedFromFloor(self, aFloor):
+        self.elevatorState.gotoWorking(self)
         self.pendingFloors.addCallFromFloor(self, aFloor)
-        
-    def gotoWorkingFromIdle(self):
-        self.cabin.closeCommandIssued()
-        self.elevatorState = self.WORKING
 
+    #CAMBIOS DE ESTADO
+
+    def gotoWorking(self):
+        self.elevatorState.gotoWorking(self)
+    def gotoIdle(self):
+        self.elevatorState.gotoIdle(self)
+
+    def gotoWorkingFromIdle(self):
+        self.elevatorState = self.WORKING
     def gotoWorkingFromWorking(self):
         pass    
-
     def gotoIdleFromWorking(self):
         self.elevatorState = self.IDLE
-
     def gotoIdleFromIdle(self):
         pass    
 

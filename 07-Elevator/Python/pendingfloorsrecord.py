@@ -11,37 +11,42 @@ class PendingFloorsRecord():
     def addCallFromFloor(self,anElevatorController,aFloor):
         #Este no sabemos como sacarlo porque si lo implementamos con un bitmap no podemos
         #saber next floor en estado stopped
-        if not in self._record(aFloor):
+        if not aFloor in self._record:
             
             #Este if se puede sacar con un null object que no llegamos a implementar            
             if not self._record: 
-                self.append(aFloor)
+                self._record.append(aFloor)
 
             #Este if no es del dominio del problema
             if anElevatorController.cabinFloorNumber() == aFloor:
                 anElevatorController.openCabinDoor()
 
-            anElevatorController.HowShouldIadd()
+            order = anElevatorController.howShouldIadd(self,aFloor)
 
-                if aFloor < self.cabinFloorNumber():
-                    self.decreasingOrderInsert(aFloor)
-                else :
-                    self.increasingOrderInsert(aFloor)
+            #No es del dominio del problema
+            if order == "INCREASING_ORDER":
+                self.increasingOrderInsert(aFloor)
+            elif order == "DECREASING_ORDER":
+                self.decreasingOrderInsert(aFloor)
+            else:
+                raise Exception("Unknown order") 
+    
+    def onFloor(self, aFloor):
+        self._record.pop(0) 
 
-            elif self.isCabinGoingUp(): 
-                if aFloor > self.cabinFloorNumber():
-                    self.increasingOrderInsert(aFloor)
-                else: 
-                    self.decreasingOrderInsert(aFloor)
+    def waitForPeopleTimedOut(self,anElevatorController):
+        #Se puede sacar con un null object que no llegamos a implementar
+        if not self._record:
+            anElevatorController.gotoIdle()
 
     def decreasingOrderInsert(self, aFloor):
         pos = 0
-        while ( pos < len(self.calls) and self.calls[pos] > aFloor ):
+        while ( pos < len(self._record) and self._record[pos] > aFloor ):
             pos += 1
-        self.calls.insert(pos, aFloor)           
+        self._record.insert(pos, aFloor)           
 
     def increasingOrderInsert(self, aFloor):
         pos = 0
-        while ( pos < len(self.calls) and self.calls[pos] < aFloor ):
+        while ( pos < len(self._record) and self._record[pos] < aFloor ):
             pos += 1
-        self.calls.insert(pos, aFloor)
+        self._record.insert(pos, aFloor)

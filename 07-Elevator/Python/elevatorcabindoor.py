@@ -18,22 +18,7 @@ class ElevatorCabinDoor(object):
 
     self._state = self.OPENED_AND_NOT_WAITING
 
-  def open_button_pressed(self):
-    self._state.goto_opening(self)
-
-  def opened_sensor_signal(self):
-    self._state.goto_opened_and_waiting(self)
-
-  def close_button_pressed(self):
-    self._state.goto_closing(self)
-
-  def closed_sensor_signal(self):
-    self._state.goto_closed(self)
-
-  def wait_for_people_timed_out(self):
-    self._state.goto_opened_and_not_waiting()
-
-
+  #Observadores de estado
   def is_opening(self):
     return self._state.is_opening()
   def is_opened(self):
@@ -43,6 +28,17 @@ class ElevatorCabinDoor(object):
   def is_closed(self):
     return self._state.is_closed()
 
+  #Cambios de estado
+  def open_button_pressed(self):
+    self._state.goto_opening(self)
+  def opened_sensor_signal(self):
+    self._state.goto_opened_and_waiting(self)
+  def close_button_pressed(self):
+    self._state.goto_closing(self)
+  def closed_sensor_signal(self):
+    self._state.goto_closed(self)
+  def wait_for_people_timed_out(self):
+    self._state.goto_opened_and_not_waiting(self)
 
   def go_from_opening_to_opening(self):
     pass
