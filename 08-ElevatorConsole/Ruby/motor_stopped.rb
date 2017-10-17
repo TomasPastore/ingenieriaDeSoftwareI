@@ -21,4 +21,8 @@ class MotorStopped < MotorState
   def accept(visitor)
     visitor.visit_motor_stopped(self)
   end
+
+  def notify_observer(an_observer)
+    an_observer.visit_motor_stopped(self)
+  end
 end

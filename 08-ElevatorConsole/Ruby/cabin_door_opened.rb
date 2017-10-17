@@ -26,4 +26,8 @@ class CabinDoorOpened < CabinDoorState
     visitor.visit_cabin_door_opened(self)
   end
 
+  def notify_observer(an_observer)
+    an_observer.visit_cabin_door_opened(self)
+  end
+
 end

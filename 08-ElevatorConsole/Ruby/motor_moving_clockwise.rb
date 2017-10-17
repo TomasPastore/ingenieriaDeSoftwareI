@@ -21,4 +21,8 @@ class MotorMovingClockwise < MotorState
   def accept(visitor)
     visitor.visit_motor_moving_clockwise(self)
   end
+
+  def notify_observer(an_observer)
+    an_observer.visit_motor_moving_clockwise(self)
+  end
 end

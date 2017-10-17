@@ -195,7 +195,7 @@ class ClosedDoorState(DoorState):
     return False
   def is_closed(self):
     return True
-def is_waiting_for_people(self):
+  def is_waiting_for_people(self):
     return False
 
 class OpeningDoorState(DoorState):

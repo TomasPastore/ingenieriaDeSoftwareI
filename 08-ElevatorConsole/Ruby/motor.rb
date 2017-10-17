@@ -80,31 +80,28 @@ class Motor
   private
 
   def change_state_to_stopped
-    @observers.each do |an_observer|
-      an_observer.visit_motor_stopped(@state)
-    end
-
     change_state_to(MotorStopped.new(self))
+    notify_observers
   end
 
   def change_state_to_moving_clockwise
-    @observers.each do |an_observer|
-      an_observer.visit_motor_moving_clockwise(@state)
-    end
-
     change_state_to(MotorMovingClockwise.new(self))
+    notify_observers
   end
 
   def change_state_to_moving_counter_clockwise
-    @observers.each do |an_observer|    
-      an_observer.visit_motor_moving_counter_clockwise(@state)
-    end
-
     change_state_to(MotorMovingCounterClockwise.new(self))
+    notify_observers
   end
 
   def change_state_to(new_state)
     @state = new_state
+  end
+
+  def notify_observers
+    @observers.each do |an_observer|
+      @state.notify_observer(an_observer)
+    end
   end
 
 end

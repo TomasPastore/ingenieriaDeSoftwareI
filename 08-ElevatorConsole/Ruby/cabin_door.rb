@@ -166,32 +166,23 @@ class CabinDoor
   end
 
   def change_state_to_closing
-    @observers.each do |an_observer|
-      an_observer.visit_cabin_door_closing(@state)
-    end
-
     change_state_to(CabinDoorClosing.new(self))
+    notify_observers
   end
 
   def change_state_to_opening
-    @observers.each do |an_observer|
-      an_observer.visit_cabin_door_opening(@state)
-    end
     change_state_to(CabinDoorOpening.new(self))
+    notify_observers
   end
 
   def change_state_to_closed
-    @observers.each do |an_observer|
-      an_observer.visit_cabin_door_closed(@state)
-    end
     change_state_to(CabinDoorClosed.new(self))
+    notify_observers
   end
 
   def change_state_to_opened
-    @observers.each do |an_observer|
-      an_observer.visit_cabin_door_opened(@state)
-    end
     change_state_to(CabinDoorOpened.new(self))
+    notify_observers
   end
 
   def change_state_to(new_state)
@@ -204,6 +195,12 @@ class CabinDoor
 
   def raise_opened_sensor_malfunction
     raise Exception.new(OPENED_SENSOR_MALFUNCTION)
+  end
+
+  def notify_observers
+    @observers.each do |an_observer|
+      @state.notify_observer(an_observer)
+    end
   end
 
 end
