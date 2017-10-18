@@ -146,10 +146,6 @@ class CabinDoor
     @motor.is_moving_counter_clockwise?
   end
 
-  def observers_notifier
-    @observers_notifier
-  end
-
   def admit_as_observer(observer)
     @observers_notifier.register(observer)
     @motor.admit_as_observer(observer)
@@ -168,27 +164,28 @@ class CabinDoor
   end
 
   def change_state_to_closing
-    change_state_to(CabinDoorClosing.new(self))
-    @state.ask_notifier_to_notify_observers(@observers_notifier)
+    change_state_and_ask_to_notify(CabinDoorClosing.new(self))
   end
 
   def change_state_to_opening
-    change_state_to(CabinDoorOpening.new(self))
-    @state.ask_notifier_to_notify_observers(@observers_notifier)
+    change_state_and_ask_to_notify(CabinDoorOpening.new(self))
   end
 
   def change_state_to_closed
-    change_state_to(CabinDoorClosed.new(self))
-    @state.ask_notifier_to_notify_observers(@observers_notifier)
+    change_state_and_ask_to_notify(CabinDoorClosed.new(self))
   end
 
   def change_state_to_opened
-    change_state_to(CabinDoorOpened.new(self))
-    @state.ask_notifier_to_notify_observers(@observers_notifier)
+    change_state_and_ask_to_notify(CabinDoorOpened.new(self))
   end
 
   def change_state_to(new_state)
     @state = new_state
+  end
+
+  def change_state_and_ask_to_notify(new_state)
+    @state = new_state
+    @state.ask_notifier_to_notify_observers(@observers_notifier)
   end
 
   def raise_closed_sensor_malfunction

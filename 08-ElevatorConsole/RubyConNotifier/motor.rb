@@ -74,10 +74,6 @@ class Motor
     raise Exception.new(ALREADY_MOVING_COUNTER_CLOCKWISE)
   end
 
-  def observers_notifier
-    @observers_notifier
-  end
-
   def admit_as_observer(observer)
     @observers_notifier.register(observer)
   end
@@ -85,22 +81,24 @@ class Motor
   private
 
   def change_state_to_stopped
-    change_state_to(MotorStopped.new(self))
-    @state.ask_notifier_to_notify_observers(@observers_notifier)
+    change_state_and_ask_to_notify(MotorStopped.new(self))
   end
 
   def change_state_to_moving_clockwise
-    change_state_to(MotorMovingClockwise.new(self))
-    @state.ask_notifier_to_notify_observers(@observers_notifier)
+    change_state_and_ask_to_notify(MotorMovingClockwise.new(self))
   end
 
   def change_state_to_moving_counter_clockwise
-    change_state_to(MotorMovingCounterClockwise.new(self))
-    @state.ask_notifier_to_notify_observers(@observers_notifier)
+    change_state_and_ask_to_notify(MotorMovingCounterClockwise.new(self))
   end
 
   def change_state_to(new_state)
     @state = new_state
+  end
+
+  def change_state_and_ask_to_notify(new_state)
+    @state = new_state
+    @state.ask_notifier_to_notify_observers(@observers_notifier)
   end
 
 end
