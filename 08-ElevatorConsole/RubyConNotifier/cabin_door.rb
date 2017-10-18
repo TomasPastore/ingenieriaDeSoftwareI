@@ -151,6 +151,11 @@ class CabinDoor
     @motor.admit_as_observer(observer)
   end
 
+  def remove_observer(observer)
+    @observers_notifier.unregister(observer)
+    @motor.remove_observer(observer)
+  end
+
   private
 
   def start_closing_door

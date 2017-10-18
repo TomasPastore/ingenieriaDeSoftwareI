@@ -78,6 +78,10 @@ class Motor
     @observers_notifier.register(observer)
   end
 
+  def remove_observer(observer)
+    @observers_notifier.unregister(observer)
+  end
+
   private
 
   def change_state_to_stopped

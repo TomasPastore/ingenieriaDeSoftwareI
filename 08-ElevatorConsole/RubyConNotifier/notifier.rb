@@ -21,4 +21,8 @@ class Notifier
     def register(an_observer)
         @observers << an_observer
     end
+
+    def unregister(an_observer)
+        @observers.delete(an_observer)
+    end
 end
