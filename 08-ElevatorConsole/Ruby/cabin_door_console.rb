@@ -2,7 +2,7 @@ class CabinDoorConsole
 
   def initialize(cabin_door)
     @lines = []
-    cabin_door.add_state_observer(self)
+    cabin_door.admit_as_observer(self)
   end
 
   def lines_enumerator
@@ -17,31 +17,35 @@ class CabinDoorConsole
     enumerator
   end
 
-  def visit_motor_moving_clockwise(state)
+  def get_notification(notification_origin)
+    notification_origin.update(self)
+  end
+
+  def update_when_motor_moving_clockwise
     @lines << 'Motor is moving clockwise'
   end
 
-  def visit_motor_moving_counter_clockwise(state)
+  def update_when_motor_moving_counter_clockwise
     @lines << 'Motor is moving counter clockwise'
   end
 
-  def visit_motor_stopped(state)
+  def update_when_motor_stopped
     @lines << 'Motor is stopped'
   end
 
-  def visit_cabin_door_closing(state)
+  def update_when_cabin_door_closing
     @lines << 'Door is closing'
   end
 
-  def visit_cabin_door_closed(state)
+  def update_when_cabin_door_closed
     @lines << 'Door is closed'
   end
 
-  def visit_cabin_door_opening(state)
+  def update_when_cabin_door_opening
     @lines << 'Door is opening'
   end
 
-  def visit_cabin_door_opened(state)
+  def update_when_cabin_door_opened
     @lines << 'Door is opened'
   end
 end

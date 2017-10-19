@@ -18,11 +18,12 @@ class MotorStopped < MotorState
     @motor.start_moving_counter_clockwise_when_stopped
   end
 
-  def accept(visitor)
-    visitor.visit_motor_stopped(self)
+  def ask_notifier_to_notify_observers(a_notifier)
+    a_notifier.notify_observers(self)
   end
 
-  def notify_observer(an_observer)
-    an_observer.visit_motor_stopped(self)
+  def update(an_allowed_observer)
+    an_allowed_observer.update_when_motor_stopped
   end
+  
 end

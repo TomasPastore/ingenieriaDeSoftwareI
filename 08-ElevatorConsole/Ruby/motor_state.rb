@@ -26,11 +26,11 @@ class MotorState
     should_be_implemented
   end
 
-  def start_moving_counter_clockwise
+  def ask_notifier_to_notify_observers(a_notifier)
     should_be_implemented
   end
 
-  def accept(visitor)
+  def update(an_allowed_observer)
     should_be_implemented
   end
 

@@ -38,7 +38,11 @@ class CabinDoorState
     false
   end
 
-  def accept(visitor)
+  def ask_notifier_to_notify_observers(a_notifier)
+    should_be_implemented
+  end
+
+  def update(an_allowed_observer)
     should_be_implemented
   end
 

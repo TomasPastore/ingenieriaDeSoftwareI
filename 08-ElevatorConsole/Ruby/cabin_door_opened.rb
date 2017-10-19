@@ -22,12 +22,12 @@ class CabinDoorOpened < CabinDoorState
     @cabin_door.opened_sensor_activated_when_opened
   end
 
-  def accept(visitor)
-    visitor.visit_cabin_door_opened(self)
+  def ask_notifier_to_notify_observers(a_notifier)
+    a_notifier.notify_observers(self)
   end
 
-  def notify_observer(an_observer)
-    an_observer.visit_cabin_door_opened(self)
+  def update(an_allowed_observer)
+    an_allowed_observer.update_when_cabin_door_opened
   end
 
 end

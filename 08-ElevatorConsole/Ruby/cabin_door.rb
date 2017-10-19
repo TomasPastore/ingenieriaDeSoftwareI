@@ -12,13 +12,10 @@ class CabinDoor
   def initialize(motor,bell)
     @motor = motor
     @bell = bell
-    @observers = []
+    #uso uno distinto al del motor porque eventualmente puede sumarse un observador 
+    #que no quiera ser notificado por ambos modulos
+    @observers_notifier = Notifier.new
     change_state_to_opened
-  end
-
-  def add_state_observer(an_observer)
-    @observers << an_observer
-    self.add_motor_state_observer(an_observer)
   end
 
   #Testing state
@@ -149,8 +146,14 @@ class CabinDoor
     @motor.is_moving_counter_clockwise?
   end
 
-  def add_motor_state_observer(observer)
-    @motor.add_state_observer(observer)
+  def admit_as_observer(observer)
+    @observers_notifier.register(observer)
+    @motor.admit_as_observer(observer)
+  end
+
+  def remove_observer(observer)
+    @observers_notifier.unregister(observer)
+    @motor.remove_observer(observer)
   end
 
   private
@@ -166,27 +169,28 @@ class CabinDoor
   end
 
   def change_state_to_closing
-    change_state_to(CabinDoorClosing.new(self))
-    notify_observers
+    change_state_and_ask_to_notify(CabinDoorClosing.new(self))
   end
 
   def change_state_to_opening
-    change_state_to(CabinDoorOpening.new(self))
-    notify_observers
+    change_state_and_ask_to_notify(CabinDoorOpening.new(self))
   end
 
   def change_state_to_closed
-    change_state_to(CabinDoorClosed.new(self))
-    notify_observers
+    change_state_and_ask_to_notify(CabinDoorClosed.new(self))
   end
 
   def change_state_to_opened
-    change_state_to(CabinDoorOpened.new(self))
-    notify_observers
+    change_state_and_ask_to_notify(CabinDoorOpened.new(self))
   end
 
   def change_state_to(new_state)
     @state = new_state
+  end
+
+  def change_state_and_ask_to_notify(new_state)
+    @state = new_state
+    @state.ask_notifier_to_notify_observers(@observers_notifier)
   end
 
   def raise_closed_sensor_malfunction
@@ -195,12 +199,6 @@ class CabinDoor
 
   def raise_opened_sensor_malfunction
     raise Exception.new(OPENED_SENSOR_MALFUNCTION)
-  end
-
-  def notify_observers
-    @observers.each do |an_observer|
-      @state.notify_observer(an_observer)
-    end
   end
 
 end
