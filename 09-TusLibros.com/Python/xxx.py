@@ -35,6 +35,10 @@ class Catalog(object):
         self._items.add(item)
 
 
+class Cashier(object):
+    pass
+
+
 # TODO: Creo que habría que cambiarle el nombre a esta clase
 class ShoppingCartTest(unittest.TestCase):
 
@@ -67,6 +71,12 @@ class ShoppingCartTest(unittest.TestCase):
         # tirar una excepción
 
         self.assertEqual(self.cart.number_of(self.item_not_in_catalog), 0)
+
+
+class CashierTests(unittest.TestCase):
+
+    def test01_xxx(self):
+        pass
 
 
 if __name__ == '__main__':
