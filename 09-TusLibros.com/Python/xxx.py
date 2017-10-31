@@ -2,11 +2,12 @@
 import unittest
 from collections import defaultdict
 from datetime import date, timedelta
-
+from copy import copy
 
 class ShoppingCart(object):
 
     NOT_IN_CATALOG_ERROR_MSG = "Item's not in catalog"
+    QUANTITY_ERROR_MSG = "Quantity must be a positive integer"
 
     def __init__(self, a_catalog):
         self.items = defaultdict(int)
@@ -16,25 +17,38 @@ class ShoppingCart(object):
         return len(self.items) == 0
 
     def add(self, item, quantity):
+
+        if quantity <= 0:
+            raise Exception(self.__class__.QUANTITY_ERROR_MSG)
+        
         if item in self.catalog:
             self.items[item] += quantity
         else:
             raise Exception(self.__class__.NOT_IN_CATALOG_ERROR_MSG)
 
+    def list(self):
+        return copy(dict(self.items))
+
     def number_of(self, an_item):
         return self.items[an_item]
+
+    def total(self):
+        return sum([self.catalog.price(item)*self.number_of(item) for item in self.list()])
 
 
 class Catalog(object):
     def __init__(self, *args, **kwargs):
         # Esto no es inmutable, así que yo le pasaría items iniciales...
-        self._items = set()
+        self._prices = {}
 
     def __contains__(self, an_item):
-        return an_item in self._items
+        return an_item in self._prices
 
-    def add(self, item):
-        self._items.add(item)
+    def add(self, item, price):
+        self._prices[item] = price
+
+    def price(self, item):
+        return self._prices[item]
 
 
 class CheckoutError(Exception):
@@ -44,25 +58,38 @@ class CheckoutError(Exception):
 
 class CreditCard(object):
     def __init__(self, number, expiration_date, card_owner):
+        #Validar parametros
         self.number = number
         self.expiration_date = expiration_date
         self.card_owner = card_owner
+
+    def is_expirated(self, date):
+        return self.expiration_date < date
+
+
+class MerchantProcessor(object):
+    def charge(self, credit_card, amount):
+        pass
 
 
 class Cashier(object):
     EXPIRATED_CARD_ERROR_MSG = 'This card is no longer valid'
     EMPTY_CART_ERROR_MESSAGE = 'Can not check out an empty cart'
 
-    def check_out(self, cart, credit_card):
-        # < o <=????
-        if credit_card.expiration_date < date.today():
+    def check_out(self, cart, credit_card, merchant_processor, date, client, sales_book):
+        
+        if credit_card.is_expirated(date):
             raise CheckoutError(
                 self.__class__.EXPIRATED_CARD_ERROR_MSG
-                )
+            )
         if cart.is_empty:
             raise CheckoutError(
                 self.__class__.EMPTY_CART_ERROR_MESSAGE
             )
+       
+        merchant_processor.charge(credit_card, cart.total())
+
+        sales_book[client] = copy(cart)
 
 
 # TODO: Creo que habría que cambiarle el nombre a esta clase
@@ -71,9 +98,9 @@ class ShoppingCartTest(unittest.TestCase):
     def setUp(self):
         self.item_in_catalog = object()
         self.item_not_in_catalog = object()
-        catalog = Catalog()
-        catalog.add(self.item_in_catalog)
-        self.cart = ShoppingCart(catalog)
+        self.catalog = Catalog()
+        self.catalog.add(self.item_in_catalog, 10)
+        self.cart = ShoppingCart(self.catalog)
 
     def test01_new_cart_is_empty(self):
         self.assertTrue(self.cart.is_empty())
@@ -84,6 +111,7 @@ class ShoppingCartTest(unittest.TestCase):
         self.assertTrue(self.cart.number_of(item_to_add) >= 10)
 
     def test03_can_not_add_items_that_are_not_in_the_catalog(self):
+        
         with self.assertRaises(Exception) as cm:
             self.cart.add(self.item_not_in_catalog, 1)
 
@@ -92,19 +120,38 @@ class ShoppingCartTest(unittest.TestCase):
             ShoppingCart.NOT_IN_CATALOG_ERROR_MSG
         )
 
-        # No estoy seguro de si esta es la mejor manera de chequearlo...
-        # O más bien, no estoy seguro de que esto no tenga que
-        # tirar una excepción
-
         self.assertEqual(self.cart.number_of(self.item_not_in_catalog), 0)
+
+    def test04_can_list_items_in_cart(self):
+        self.catalog.add("Jamon",5)
+        self.catalog.add("Queso",10)
+        self.cart.add(self.item_in_catalog, 1)
+        self.cart.add("Jamon", 3)
+        self.cart.add("Queso", 2)
+        dictionary = {
+            self.item_in_catalog: 1,
+            'Jamon': 3,
+            'Queso': 2,
+        }
+        self.assertEqual(dictionary, self.cart.list())
 
 
 class CashierTests(unittest.TestCase):
 
     def setUp(self):
+
+        class ExceptionalMerchantProcessor(object):
+            def charge(self, credit_card, amount):
+                raise Exception('You should not call me')
+
+
         catalog = Catalog()
         item = object()
-        catalog.add(item)
+        catalog.add(item,10)
+        self.merchant_processor = MerchantProcessor()
+        self.exceptional_merchant_processor=ExceptionalMerchantProcessor()
+        self.client = object()
+        self.empty_sales_book = {}
         self.empty_cart = ShoppingCart(catalog)
         self.non_empty_cart = ShoppingCart(catalog)
 
@@ -123,24 +170,45 @@ class CashierTests(unittest.TestCase):
         )
 
     def test01_can_not_checkout_empty_cart(self):
+        
         with self.assertRaises(CheckoutError) as cm:
-            self.cashier.check_out(self.empty_cart, self.valid_card)
+            self.cashier.check_out(
+                cart=self.empty_cart, 
+                credit_card=self.valid_card,
+                merchant_processor=self.exceptional_merchant_processor,
+                date=date.today(),
+                client = self.client,
+                sales_book = self.empty_sales_book
+            )
 
         self.assertEqual(
             cm.exception.message,
             Cashier.EMPTY_CART_ERROR_MESSAGE,
-        )
+        ) 
+        self.assertEqual(len(self.empty_sales_book), 0)
+       
 
     def test02_cashier_can_not_checkout_with_invalid_card(self):
+
         with self.assertRaises(CheckoutError) as cm:
-            self.cashier.check_out(self.non_empty_cart, self.expirated_card)
+
+            self.cashier.check_out(
+                cart=self.non_empty_cart, 
+                credit_card=self.expirated_card,
+                merchant_processor=self.exceptional_merchant_processor,
+                date=date.today(),
+                client = self.client,
+                sales_book = self.empty_sales_book
+            )
 
         self.assertEqual(
             cm.exception.message,
             Cashier.EXPIRATED_CARD_ERROR_MSG
         )
-
+        self.assertEqual(len(self.empty_sales_book), 0)
         self.assertFalse(self.non_empty_cart.is_empty())
+
+#Robada, sin credito, ver que no hable con el merchant si salto excepcion
 
 
 if __name__ == '__main__':
