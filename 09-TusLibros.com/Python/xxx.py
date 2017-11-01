@@ -138,13 +138,21 @@ class ShoppingCartTest(unittest.TestCase):
         }
         self.assertEqual(dictionary, self.cart.list())
 
+class MerchantProcessorSimulator(object):
 
+<<<<<<< HEAD
 class MerchantProcessorSimulator(object):
 
     STOLEN_CARD_ERROR_MSG = 'Stolen card'
     UNFOUNDED_CARD_ERROR_MSG = 'Card without founds'
     CALLED_CARD_EXCEPTION_MSG = 'Called'
 
+=======
+    STOLEN_CARD_ERROR_MSG = 'Stolen card'
+    UNFOUNDED_CARD_ERROR_MSG = 'Card without founds'
+    CALLED_CARD_EXCEPTION_MSG = 'Called'
+
+>>>>>>> cbbe6bd5fb1f46d8963180cdc017b2ec2bc2f852
     def __init__(self, stolen_cards, unfounded_cards):
         self.stolen_cards = stolen_cards
         self.unfounded_cards = unfounded_cards
