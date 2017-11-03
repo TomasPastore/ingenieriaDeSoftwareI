@@ -4,6 +4,62 @@ from collections import defaultdict
 from datetime import date, timedelta
 from copy import copy
 
+class RESTInterface(object):
+
+    INVALID_CREDENTIALS = 'Invalid credentials'
+
+    def __init__(self, users):
+        self._cart_information_by_ID = {}
+        self._sales_books = {}
+        self._users = users
+
+    def create_cart(self, client_ID, client_password):
+        cart_ID = object()
+
+        if client_ID in self._users:
+            if client_password == self._users[client_ID]:
+                return cart_ID
+            else:
+                raise Exception(self.__class__.INVALID_CREDENTIALS)
+        else:
+            raise Exception(self.__class__.INVALID_CREDENTIALS) 
+
+
+    def add_to_cart(self, cart_ID, book_ISBN, quantity):
+        pass
+
+    def list_cart(self, cart_ID):
+        return cart.list()
+        
+    def checkout_cart(self, cart_ID, credit_card_number, card_expiration_date, credit_card_owner):
+        pass
+
+    def list_purchases(self, client_ID, client_password):
+        return self._sales_books[client]
+
+class RESTTests(unittest.TestCase):
+    
+    def setUp(self):
+        self.juan_password = 'password'
+        self.users = {
+            'Juan':self.juan_password
+        }
+        self.interface = RESTInterface(self.users)
+
+
+    def test01_can_not_create_cart_with_invalid_username(self):
+        with self.assertRaises(Exception) as cm:
+            self.interface.create_cart('Pedro', self.juan_password)
+
+        self.assertEqual(cm.exception.message, RESTInterface.INVALID_CREDENTIALS)
+
+    def test02_can_not_create_cart_with_invalid_password(self):
+        with self.assertRaises(Exception) as cm:
+            self.interface.create_cart('Juan', 'invalid_password')
+
+        self.assertEqual(cm.exception.message, RESTInterface.INVALID_CREDENTIALS)
+
+
 
 class ShoppingCart(object):
 
@@ -140,19 +196,10 @@ class ShoppingCartTest(unittest.TestCase):
 
 class MerchantProcessorSimulator(object):
 
-<<<<<<< HEAD
-class MerchantProcessorSimulator(object):
-
     STOLEN_CARD_ERROR_MSG = 'Stolen card'
     UNFOUNDED_CARD_ERROR_MSG = 'Card without founds'
     CALLED_CARD_EXCEPTION_MSG = 'Called'
 
-=======
-    STOLEN_CARD_ERROR_MSG = 'Stolen card'
-    UNFOUNDED_CARD_ERROR_MSG = 'Card without founds'
-    CALLED_CARD_EXCEPTION_MSG = 'Called'
-
->>>>>>> cbbe6bd5fb1f46d8963180cdc017b2ec2bc2f852
     def __init__(self, stolen_cards, unfounded_cards):
         self.stolen_cards = stolen_cards
         self.unfounded_cards = unfounded_cards
