@@ -4,61 +4,77 @@ from collections import defaultdict
 from datetime import date, timedelta
 from copy import copy
 
+
 class RESTInterface(object):
 
     INVALID_CREDENTIALS = 'Invalid credentials'
 
-    def __init__(self, users):
+    def __init__(self, users, catalog):
         self._cart_information_by_ID = {}
         self._sales_books = {}
         self._users = users
+        self._catalog = catalog
 
     def create_cart(self, client_ID, client_password):
         cart_ID = object()
 
         if client_ID in self._users:
             if client_password == self._users[client_ID]:
+                self._cart_information_by_ID[cart_ID] = ShoppingCart(
+                    self._catalog
+                )
                 return cart_ID
             else:
                 raise Exception(self.__class__.INVALID_CREDENTIALS)
         else:
-            raise Exception(self.__class__.INVALID_CREDENTIALS) 
-
+            raise Exception(self.__class__.INVALID_CREDENTIALS)
 
     def add_to_cart(self, cart_ID, book_ISBN, quantity):
         pass
 
     def list_cart(self, cart_ID):
-        return cart.list()
-        
-    def checkout_cart(self, cart_ID, credit_card_number, card_expiration_date, credit_card_owner):
+        return self._cart_information_by_ID[cart_ID].list()
+
+    def checkout_cart(self, cart_ID, credit_card_number, card_expiration_date,
+                      credit_card_owner):
         pass
 
     def list_purchases(self, client_ID, client_password):
         return self._sales_books[client]
 
+
 class RESTTests(unittest.TestCase):
-    
+
     def setUp(self):
+        self.juan_id = 'Juan'
         self.juan_password = 'password'
         self.users = {
-            'Juan':self.juan_password
+            self.juan_id: self.juan_password
         }
-        self.interface = RESTInterface(self.users)
-
+        self.catalog = Catalog()
+        self.interface = RESTInterface(self.users, self.catalog)
 
     def test01_can_not_create_cart_with_invalid_username(self):
         with self.assertRaises(Exception) as cm:
             self.interface.create_cart('Pedro', self.juan_password)
 
-        self.assertEqual(cm.exception.message, RESTInterface.INVALID_CREDENTIALS)
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.INVALID_CREDENTIALS
+        )
 
     def test02_can_not_create_cart_with_invalid_password(self):
         with self.assertRaises(Exception) as cm:
-            self.interface.create_cart('Juan', 'invalid_password')
+            self.interface.create_cart(self.juan_id, 'invalid_password')
 
-        self.assertEqual(cm.exception.message, RESTInterface.INVALID_CREDENTIALS)
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.INVALID_CREDENTIALS
+        )
 
+    def test03_can_create_cart_with_valid_credentials(self):
+        cart_id = self.interface.create_cart(self.juan_id, self.juan_password)
+        self.assertEqual(len(self.interface.list_cart(cart_id)), 0)
 
 
 class ShoppingCart(object):
@@ -193,6 +209,7 @@ class ShoppingCartTest(unittest.TestCase):
             'Queso': 2,
         }
         self.assertEqual(dictionary, self.cart.list())
+
 
 class MerchantProcessorSimulator(object):
 
