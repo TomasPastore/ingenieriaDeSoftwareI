@@ -1,27 +1,34 @@
 # For python this file uses encoding: utf-8
 import unittest
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from copy import copy
+from functools import partial
 
 
 class RESTInterface(object):
 
+    EXPIRATED_CART_MSG = 'Expirated cart'
     INVALID_CREDENTIALS = 'Invalid credentials'
 
-    def __init__(self, users, catalog):
+    def __init__(self, users, catalog, clock):
         self._cart_information_by_ID = {}
         self._sales_books = {}
         self._users = users
         self._catalog = catalog
+        self._clock = clock
 
     def create_cart(self, client_ID, client_password):
         cart_ID = object()
 
         if client_ID in self._users:
             if client_password == self._users[client_ID]:
-                self._cart_information_by_ID[cart_ID] = ShoppingCart(
-                    self._catalog
+                self._cart_information_by_ID[cart_ID] = ExpiratingCart(
+                    ShoppingCart(
+                        self._catalog
+                    ),
+                    timedelta(minutes=30),
+                    self._clock
                 )
                 return cart_ID
             else:
@@ -30,7 +37,7 @@ class RESTInterface(object):
             raise Exception(self.__class__.INVALID_CREDENTIALS)
 
     def add_to_cart(self, cart_ID, book_ISBN, quantity):
-        pass
+        self._cart_information_by_ID[cart_ID].add(book_ISBN, quantity)
 
     def list_cart(self, cart_ID):
         return self._cart_information_by_ID[cart_ID].list()
@@ -43,6 +50,22 @@ class RESTInterface(object):
         return self._sales_books[client]
 
 
+class ExpiratingCart(object):
+    def __init__(self, a_shopping_cart, validity_time, clock):
+        self._cart = a_shopping_cart
+        self._last_use = clock.now()
+        self._validity_time = validity_time
+        self._clock = clock
+
+    def __getattr__(self, attr):
+        now = self._clock.now()
+        if now - self._last_use < timedelta(minutes=30):
+            self._last_use = now
+            return getattr(self._cart, attr)
+        else:
+            raise Exception('Expirated cart')
+
+
 class RESTTests(unittest.TestCase):
 
     def setUp(self):
@@ -52,7 +75,18 @@ class RESTTests(unittest.TestCase):
             self.juan_id: self.juan_password
         }
         self.catalog = Catalog()
-        self.interface = RESTInterface(self.users, self.catalog)
+        self.interface = RESTInterface(self.users, self.catalog, self)
+        self.valid_cart_id = self.interface.create_cart(
+            self.juan_id,
+            self.juan_password
+        )
+
+    def now(self):
+        return datetime(
+            year=2017,
+            month=3,
+            day=11
+        )
 
     def test01_can_not_create_cart_with_invalid_username(self):
         with self.assertRaises(Exception) as cm:
@@ -73,8 +107,20 @@ class RESTTests(unittest.TestCase):
         )
 
     def test03_can_create_cart_with_valid_credentials(self):
-        cart_id = self.interface.create_cart(self.juan_id, self.juan_password)
-        self.assertEqual(len(self.interface.list_cart(cart_id)), 0)
+        self.assertEqual(len(self.interface.list_cart(self.valid_cart_id)), 0)
+
+    def test04_can_not_add_items_to_an_expirated_cart(self):
+        previous_datetime = self.now()
+
+        def now(self):
+            return previous_datetime + timedelta(minutes=30)
+        self.now = partial(now, self)
+
+        with self.assertRaises(
+                Exception,
+                msg=RESTInterface.EXPIRATED_CART_MSG):
+
+            self.interface.add_to_cart(self.valid_cart_id, object(), 1)
 
 
 class ShoppingCart(object):
