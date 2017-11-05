@@ -1,11 +1,13 @@
 # For python this file uses encoding: utf-8
 import unittest
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from datetime import date, timedelta, datetime
 from copy import copy
 from functools import partial
 import random
 import uuid
+
+CartInformation = namedtuple('CartInformation', ['cart', 'client_ID'])
 
 
 class RESTInterface(object):
@@ -19,23 +21,21 @@ class RESTInterface(object):
     def __init__(self, users, catalog, clock, cart_ID_generator,
                  cart_validity_time):
         self._users = users
-        # cartID: (carro, clientID)
         self._cart_information_by_ID = {}
         self._catalog = catalog
         self._clock = clock
         self._sales_books = {}
         self._cart_validity_time = cart_validity_time
-        # esto no sabia como escribirlo mas corto
         for user in users.keys():
             self._sales_books[user] = []
         self._cart_ID_generator = cart_ID_generator
 
     def create_cart(self, client_ID, client_password):
 
-        self.__check_valid_credentials__(client_ID, client_password)
+        self.check_valid_credentials(client_ID, client_password)
         cart_ID = self._cart_ID_generator.new_ID()
 
-        self._cart_information_by_ID[cart_ID] = (
+        self._cart_information_by_ID[cart_ID] = CartInformation(
                     ExpirableCart(
                         ShoppingCart(self._catalog),
                         self._cart_validity_time,
@@ -47,27 +47,28 @@ class RESTInterface(object):
         return cart_ID
 
     def add_to_cart(self, cart_ID, book_ISBN, quantity):
-        self.__check_valid_cart_ID__(cart_ID)
-        self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX].add(
+        self.check_valid_cart_ID(cart_ID)
+        self._cart_information_by_ID[cart_ID].cart.add(
             book_ISBN,
             quantity
         )
 
     def list_cart(self, cart_ID):
-        self.__check_valid_cart_ID__(cart_ID)
-        return self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX].list()
+        self.check_valid_cart_ID(cart_ID)
+        return self._cart_information_by_ID[cart_ID].cart.list()
 
     def checkout_cart(self, cart_ID, credit_card_number, card_expiration_date,
                       credit_card_owner):
-        self.__check_valid_cart_ID__(cart_ID)
+        self.check_valid_cart_ID(cart_ID)
         a_cashier = Cashier()
         a_credit_card = CreditCard(
             credit_card_number,
             card_expiration_date,
-            credit_card_owner)
-        client_ID = self._cart_information_by_ID[cart_ID][self.__class__.CLIENT_ID_INDEX]
+            credit_card_owner
+        )
+        client_ID = self._cart_information_by_ID[cart_ID].client_ID
         a_cashier.check_out(
-            cart=self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX],
+            cart=self._cart_information_by_ID[cart_ID].cart,
             credit_card=a_credit_card,
             merchant_processor=MerchantProcessor(),
             date=self._clock.now().date(),
@@ -78,14 +79,14 @@ class RESTInterface(object):
         self._cart_information_by_ID.pop(cart_ID)
 
     def list_purchases(self, client_ID, client_password):
-        self.__check_valid_credentials__(client_ID, client_password)
+        self.check_valid_credentials(client_ID, client_password)
         return self._sales_books[client_ID]
 
-    def __check_valid_credentials__(self, user, password):
+    def check_valid_credentials(self, user, password):
         if (user not in self._users) or password != self._users[user]:
             raise Exception(self.__class__.INVALID_CREDENTIALS)
 
-    def __check_valid_cart_ID__(self, cart_ID):
+    def check_valid_cart_ID(self, cart_ID):
         if cart_ID not in self._cart_information_by_ID.keys():
             raise Exception(self.__class__.INVALID_CART_ID)
 
@@ -234,7 +235,13 @@ class RESTTests(unittest.TestCase):
                 self.card_expiration_date,
                 self.credit_card_owner
                 )
-        # No assertion needed?
+
+        self.assertEqual(self.interface.list_purchases(
+            self.juan_id,
+            self.juan_password
+            ),
+            [((self.item_in_catalog, 1),)]
+        )
 
     def test10_cart_can_only_be_checked_out_once(self):
 
@@ -244,20 +251,19 @@ class RESTTests(unittest.TestCase):
                 self.credit_card_number,
                 self.card_expiration_date,
                 self.credit_card_owner
-                )
+            )
         with self.assertRaises(Exception) as cm:
             self.interface.checkout_cart(
                 self.valid_cart_id,
                 self.credit_card_number,
                 self.card_expiration_date,
                 self.credit_card_owner
-                )
+            )
 
         self.assertEqual(
             cm.exception.message,
             RESTInterface.INVALID_CART_ID
             )
-        # Es inválido porque tras el checkout se borra el id.
 
     def test11_reports_invalid_credentials_trying_to_list_purchases_with_invalid_client_ID_(self):
 
@@ -285,9 +291,8 @@ class RESTTests(unittest.TestCase):
             RESTInterface.INVALID_CREDENTIALS
         )
 
-
     def test13_can_create_list_purchases_with_valid_credentials(self):
-        listed_purchases = 0
+
         self.interface.add_to_cart(self.valid_cart_id, self.item_in_catalog, 1)
         self.interface.checkout_cart(
                 self.valid_cart_id,
@@ -300,25 +305,20 @@ class RESTTests(unittest.TestCase):
                 self.juan_password
             )
 
-        self.assertEqual(
-            listed_purchases,
-            [((self.item_in_catalog, 1),)]
-            )
+        self.assertTrue(((self.item_in_catalog, 1),) in listed_purchases)
 
     def test14_cart_ID_generator_does_never_return_the_same_ID(self):
-        # hacer check out y generar otro y ver que es distinto
-        pass
+        cart_id = self.interface.create_cart(self.juan_id, self.juan_password)
+        self.assertNotEqual(cart_id, self.valid_cart_id)
 
     def test15_add_to_cart_reports_if_cart_ID_is_invalid(self):
-        state0 = self.interface
         with self.assertRaises(Exception) as cm:
             self.interface.add_to_cart('invalid cart id', object(), 1)
 
         self.assertEqual(
             cm.exception.message,
             RESTInterface.INVALID_CART_ID
-            )
-        self.assertEqual(state0, self.interface)
+        )
 
     def test16_list_cart_reports_if_cart_ID_is_invalid(self):
         state0 = self.interface
@@ -329,7 +329,6 @@ class RESTTests(unittest.TestCase):
             cm.exception.message,
             RESTInterface.INVALID_CART_ID
             )
-        self.assertEqual(state0, self.interface)
 
     def test17_checkout_reports_if_cart_ID_is_invalid(self):
         with self.assertRaises(Exception) as cm:
