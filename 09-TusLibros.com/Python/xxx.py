@@ -4,53 +4,88 @@ from collections import defaultdict
 from datetime import date, timedelta, datetime
 from copy import copy
 from functools import partial
-
+import random
 
 class RESTInterface(object):
 
     EXPIRATED_CART_MSG = 'Expirated cart'
     INVALID_CREDENTIALS = 'Invalid credentials'
+    INVALID_CART_ID = 'Not excisting cart ID' 
+    CART_INDEX = 0
+    CLIENT_ID_INDEX = 1
 
-    def __init__(self, users, catalog, clock):
-        self._cart_information_by_ID = {}
-        self._sales_books = {}
+    def __init__(self, users, catalog, clock, cart_ID_generator):
         self._users = users
+        #cartID: (carro, clientID)
+        self._cart_information_by_ID = {}
         self._catalog = catalog
         self._clock = clock
+        self._sales_books = {}
+        #esto no sabia como escribirlo mas corto
+        for user in users.keys():
+        	self._sales_books[user] = []
+        self._cart_ID_generator = cart_ID_generator
 
     def create_cart(self, client_ID, client_password):
-        cart_ID = object()
+        
+        self.__check_valid_credentials__(client_ID, client_password)
+        cart_ID = self._cart_ID_generator.new_ID()
 
-        if client_ID in self._users:
-            if client_password == self._users[client_ID]:
-                self._cart_information_by_ID[cart_ID] = ExpiratingCart(
-                    ShoppingCart(
-                        self._catalog
-                    ),
-                    timedelta(minutes=30),
-                    self._clock
-                )
-                return cart_ID
-            else:
-                raise Exception(self.__class__.INVALID_CREDENTIALS)
-        else:
-            raise Exception(self.__class__.INVALID_CREDENTIALS)
+        self._cart_information_by_ID[cart_ID]=(
+        			ExpirableCart(
+                    	ShoppingCart(self._catalog),
+                    		timedelta(minutes=30),
+                    		self._clock
+                		),
+        			client_ID
+        			)
+
+        return cart_ID
 
     def add_to_cart(self, cart_ID, book_ISBN, quantity):
-        self._cart_information_by_ID[cart_ID].add(book_ISBN, quantity)
-
+        self.__check_valid_cart_ID__(cart_ID)
+        self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX].add(book_ISBN, quantity)
+         
     def list_cart(self, cart_ID):
-        return self._cart_information_by_ID[cart_ID].list()
+    	self.__check_valid_cart_ID__(cart_ID)
+        return self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX].list()
 
     def checkout_cart(self, cart_ID, credit_card_number, card_expiration_date,
                       credit_card_owner):
-        pass
+        self.__check_valid_cart_ID__(cart_ID)
+        a_cashier = Cashier()
+        a_credit_card = CreditCard(credit_card_number, card_expiration_date, credit_card_owner)
+        client_ID = self._cart_information_by_ID[cart_ID][self.__class__.CLIENT_ID_INDEX]
+        a_cashier.check_out(
+        	cart = self._cart_information_by_ID[cart_ID],
+        	credit_card = a_credit_card,
+    		merchant_processor = MerchantProcessor(),
+    		date = self._clock.today(),
+    		client_sales_book = self._sales_books[client_ID]
+           	)
+
+        #Decision de implementacion, la venta la guarda el cashier
+        self._cart_information_by_ID.pop(cart_ID)
 
     def list_purchases(self, client_ID, client_password):
-        return self._sales_books[client]
+        self.__check_valid_credentials__(client_ID, client_password)
+        return self._sales_books[client_ID]
 
+    def __check_valid_credentials__(self, user, password):
+        if (not user in self._users) or password != self._users[user]:          
+      		raise Exception(self.__class__.INVALID_CREDENTIALS)
 
-class ExpiratingCart(object):
+    def __check_valid_cart_ID__(self, cart_ID):
+    	if not cart_ID in self._cart_information_by_ID.keys():
+    		raise Exception(self.__class__.INVALID_CART_ID)
+
+#otra opcion es hacer un IdentifiedCart(cartIDs) como el expirableCart que verifique que este en los cartIDs
+
+#Podriamos agregarle la interfaz como observer o un notifier, y avisarle 
+#cuando expira para borrarlo del registro e ir limpiando si es que no interesa 
+#guardar los expirados, pero no esta especificado nada en el enunciado. 
+
+class ExpirableCart(object):
     def __init__(self, a_shopping_cart, validity_time, clock):
         self._cart = a_shopping_cart
         self._last_use = clock.now()
@@ -59,12 +94,25 @@ class ExpiratingCart(object):
 
     def __getattr__(self, attr):
         now = self._clock.now()
-        if now - self._last_use < timedelta(minutes=30):
+        if now - self._last_use < self._validity_time:
             self._last_use = now
             return getattr(self._cart, attr)
         else:
             raise Exception('Expirated cart')
 
+class CartIDGenerator(object):
+	
+	def __init__(self):
+		self._generated_IDs = set()
+	
+	def new_ID(self):
+		
+		ID = ''.join(random.choice('0123456789ABCDEF') for i in range(16)) 
+		
+		if not ID in self._generated_IDs:
+			return ID
+		else: 
+			return self.new_ID()
 
 class RESTTests(unittest.TestCase):
 
@@ -74,8 +122,9 @@ class RESTTests(unittest.TestCase):
         self.users = {
             self.juan_id: self.juan_password
         }
-        self.catalog = Catalog()
-        self.interface = RESTInterface(self.users, self.catalog, self)
+        self.item_in_catalog = object()
+        self.catalog = Catalog({self.item_in_catalog:10})
+        self.interface = RESTInterface(self.users, self.catalog, self, CartIDGenerator())
         self.valid_cart_id = self.interface.create_cart(
             self.juan_id,
             self.juan_password
@@ -86,7 +135,7 @@ class RESTTests(unittest.TestCase):
             year=2017,
             month=3,
             day=11
-        )
+        ) #creo que esto no hay que hardcodearlo, dijo que tenia que funcionar siempre independiente de la fecha
 
     def test01_can_not_create_cart_with_invalid_username(self):
         with self.assertRaises(Exception) as cm:
@@ -109,6 +158,7 @@ class RESTTests(unittest.TestCase):
     def test03_can_create_cart_with_valid_credentials(self):
         self.assertEqual(len(self.interface.list_cart(self.valid_cart_id)), 0)
 
+        
     def test04_can_not_add_items_to_an_expirated_cart(self):
         previous_datetime = self.now()
 
@@ -121,6 +171,38 @@ class RESTTests(unittest.TestCase):
                 msg=RESTInterface.EXPIRATED_CART_MSG):
 
             self.interface.add_to_cart(self.valid_cart_id, object(), 1)
+
+        #ASERTAR QUE NO SE AGREGO, no se bien como hacerlo, porque si bien 
+        #es que el list del carro sea el mismo, como esta expirado no podes 
+        #pedir list_cart() porque esta expirado
+
+    def test05_can_add_items_to_a_non_expirated_cart(self):
+        old_items = self.interface.list_cart(self.valid_cart_id)
+        self.interface.add_to_cart(self.valid_cart_id, self.item_in_catalog, 1)
+
+        items_now = self.interface.list_cart(self.valid_cart_id)
+        self.assertTrue(old_items != items_now )
+        #supongo que verificar que cambio alcanza, verificar que agrega bien 
+        #creo yo es responsabilidad de un test unitario del carro. 
+
+    #este creo que no tiene sentido, o al menos no creo que sea funcional sino unitario   
+    def test06_can_not_operate_with_invalid_cart_id(self):
+    	pass #TODO
+
+    def test06_can_not_list_expirated_cart(self):
+    	pass #TODO
+    def test07_can_list_non_expirated_cart(self):
+    	pass #TODO
+   	def test08_can_not_checkout_expirated_cart(self):
+   		pass #TODO
+   	def test09_can_checkout_non_expirated_cart(self):
+   		pass #TODO
+   	def test10_cart_can_only_be_checkedout_once(self):
+   		pass #TODO
+   	def test11_can_not_list_purchases_expirated_cart(self):
+   		pass #TODO
+   	def test12_can_list_purchases_non_expirated_cart(self):
+   		pass #TODO
 
 
 class ShoppingCart(object):
@@ -145,27 +227,28 @@ class ShoppingCart(object):
         else:
             raise Exception(self.__class__.NOT_IN_CATALOG_ERROR_MSG)
 
-    def list(self):
-        return copy(dict(self.items))
+    def list(self): #supongo que cuando se crean las tuplas son copias. sino usar copy
+        return [(item,self.number_of(item)) for item in self.items]
 
     def number_of(self, an_item):
         return self.items[an_item]
 
     def total(self):
         return sum([self.catalog.price(item)*self.number_of(item) for
-                    item in self.list()])
+                    item in self.items])
 
+    def save_in(self, a_client_sales_book):
+    	a_client_sales_book.append(tuple(self.list()))
 
 class Catalog(object):
-    def __init__(self, *args, **kwargs):
-        # Esto no es inmutable, así que yo le pasaría items iniciales...
-        self._prices = {}
+    def __init__(self, items_with_prices):
+        self._prices = items_with_prices
 
     def __contains__(self, an_item):
         return an_item in self._prices
 
-    def add(self, item, price):
-        self._prices[item] = price
+    #def add(self, item, price):
+    #   self._prices[item] = price
 
     def price(self, item):
         return self._prices[item]
@@ -186,6 +269,13 @@ class CreditCard(object):
     def is_expirated(self, date):
         return self.expiration_date < date
 
+    def number(self):
+    	return copy(self.number)
+    def expiration_date(self):
+    	return copy(self.expiration_date)
+    def owner(self):
+    	return copy(self.card_owner)
+
 
 class MerchantProcessor(object):
     def charge(self, credit_card, amount):
@@ -197,7 +287,7 @@ class Cashier(object):
     EMPTY_CART_ERROR_MESSAGE = 'Can not check out an empty cart'
 
     def check_out(self, cart, credit_card, merchant_processor,
-                  date, client, sales_book):
+                  date, client_sales_book):
 
         if credit_card.is_expirated(date):
             raise CheckoutError(
@@ -210,8 +300,8 @@ class Cashier(object):
 
         merchant_processor.charge(credit_card, cart.total())
 
-        sales_book[client] = copy(cart)
-
+        cart.save_in(client_sales_book)
+        #agregar test. 
 
 # TODO: Creo que habría que cambiarle el nombre a esta clase
 class ShoppingCartTest(unittest.TestCase):
@@ -219,8 +309,11 @@ class ShoppingCartTest(unittest.TestCase):
     def setUp(self):
         self.item_in_catalog = object()
         self.item_not_in_catalog = object()
-        self.catalog = Catalog()
-        self.catalog.add(self.item_in_catalog, 10)
+        self.catalog = Catalog({
+        	self.item_in_catalog: 10,
+        	"Jamon":5,
+        	"Queso":10
+        	})
         self.cart = ShoppingCart(self.catalog)
 
     def test01_new_cart_is_empty(self):
@@ -244,17 +337,17 @@ class ShoppingCartTest(unittest.TestCase):
         self.assertEqual(self.cart.number_of(self.item_not_in_catalog), 0)
 
     def test04_can_list_items_in_cart(self):
-        self.catalog.add("Jamon", 5)
-        self.catalog.add("Queso", 10)
         self.cart.add(self.item_in_catalog, 1)
         self.cart.add("Jamon", 3)
         self.cart.add("Queso", 2)
-        dictionary = {
-            self.item_in_catalog: 1,
-            'Jamon': 3,
-            'Queso': 2,
-        }
-        self.assertEqual(dictionary, self.cart.list())
+        listed_cart = [
+            (self.item_in_catalog, 1),
+            ('Jamon', 3),
+            ('Queso', 2)
+        ]
+        print listed_cart
+        print self.cart.list()
+        self.assertEqual(set(listed_cart), set(self.cart.list()))
 
 
 class MerchantProcessorSimulator(object):
@@ -281,12 +374,10 @@ class CashierTests(unittest.TestCase):
 
     def setUp(self):
 
-        catalog = Catalog()
         item = object()
-        catalog.add(item, 10)
+        catalog = Catalog({item:10})
         self.merchant_processor = MerchantProcessor()
-        self.client = object()
-        self.empty_sales_book = {}
+        self.client_empty_sales_book = []
         self.empty_cart = ShoppingCart(catalog)
         self.non_empty_cart = ShoppingCart(catalog)
 
@@ -326,15 +417,14 @@ class CashierTests(unittest.TestCase):
                 credit_card=self.valid_card,
                 merchant_processor=self.merchant_processor_simulator,
                 date=date.today(),
-                client=self.client,
-                sales_book=self.empty_sales_book
+                client_sales_book=self.client_empty_sales_book
             )
 
         self.assertEqual(
             cm.exception.message,
             Cashier.EMPTY_CART_ERROR_MESSAGE,
         )
-        self.assertEqual(len(self.empty_sales_book), 0)
+        self.assertEqual(len(self.client_empty_sales_book), 0)
 
     def test02_cashier_can_not_checkout_with_invalid_card(self):
 
@@ -345,8 +435,7 @@ class CashierTests(unittest.TestCase):
                 credit_card=self.expirated_card,
                 merchant_processor=self.merchant_processor_simulator,
                 date=date.today(),
-                client=self.client,
-                sales_book=self.empty_sales_book
+                client_sales_book=self.client_empty_sales_book
             )
 
         self.assertEqual(
@@ -354,7 +443,7 @@ class CashierTests(unittest.TestCase):
             Cashier.EXPIRATED_CARD_ERROR_MSG
         )
 
-        self.assertEqual(len(self.empty_sales_book), 0)
+        self.assertEqual(len(self.client_empty_sales_book), 0)
         self.assertFalse(self.non_empty_cart.is_empty())
         self.assertFalse(self.merchant_processor_simulator.charge_called)
 
@@ -365,11 +454,10 @@ class CashierTests(unittest.TestCase):
             credit_card=self.valid_card,
             merchant_processor=self.merchant_processor_simulator,
             date=date.today(),
-            client=self.client,
-            sales_book=self.empty_sales_book
+            client_sales_book=self.client_empty_sales_book
         )
 
-        self.assertEqual(len(self.empty_sales_book), 1)
+        self.assertEqual(len(self.client_empty_sales_book), 1)
         self.assertTrue(self.merchant_processor_simulator.charge_called)
 
     def test04_can_not_sell_to_a_stolen_card(self):
@@ -379,15 +467,14 @@ class CashierTests(unittest.TestCase):
                 credit_card=self.stolen_card,
                 merchant_processor=self.merchant_processor_simulator,
                 date=date.today(),
-                client=self.client,
-                sales_book=self.empty_sales_book
+            	client_sales_book=self.client_empty_sales_book
             )
 
         self.assertEqual(
             MerchantProcessorSimulator.STOLEN_CARD_ERROR_MSG,
             cm.exception.message
         )
-        self.assertEqual(len(self.empty_sales_book), 0)
+        self.assertEqual(len(self.client_empty_sales_book), 0)
         self.assertFalse(self.non_empty_cart.is_empty())
 
     def test05_can_not_sell_to_an_unfounded_card(self):
@@ -397,19 +484,15 @@ class CashierTests(unittest.TestCase):
                 credit_card=self.unfounded_card,
                 merchant_processor=self.merchant_processor_simulator,
                 date=date.today(),
-                client=self.client,
-                sales_book=self.empty_sales_book
+            	client_sales_book=self.client_empty_sales_book
             )
 
         self.assertEqual(
             MerchantProcessorSimulator.UNFOUNDED_CARD_ERROR_MSG,
             cm.exception.message
         )
-        self.assertEqual(len(self.empty_sales_book), 0)
+        self.assertEqual(len(self.client_empty_sales_book), 0)
         self.assertFalse(self.non_empty_cart.is_empty())
-
-# Robada, sin credito, ver que no hable con el merchant si salto excepcion
-
 
 if __name__ == '__main__':
     unittest.main()
