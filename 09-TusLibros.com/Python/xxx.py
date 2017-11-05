@@ -58,7 +58,7 @@ class RESTInterface(object):
         a_credit_card = CreditCard(credit_card_number, card_expiration_date, credit_card_owner)
         client_ID = self._cart_information_by_ID[cart_ID][self.__class__.CLIENT_ID_INDEX]
         a_cashier.check_out(
-            cart = self._cart_information_by_ID[cart_ID],
+            cart = self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX],
             credit_card = a_credit_card,
             merchant_processor = MerchantProcessor(),
             date = self._clock.today(),
@@ -79,12 +79,6 @@ class RESTInterface(object):
     def __check_valid_cart_ID__(self, cart_ID):
         if cart_ID not in self._cart_information_by_ID.keys():
             raise Exception(self.__class__.INVALID_CART_ID)
-
-# otra opcion es hacer un IdentifiedCart(cartIDs) como el expirableCart que verifique que este en los cartIDs
-
-# Podriamos agregarle la interfaz como observer o un notifier, y avisarle
-# cuando expira para borrarlo del registro e ir limpiando si es que no interesa
-# guardar los expirados, pero no esta especificado nada en el enunciado.
 
 
 class ExpirableCart(object):
@@ -128,6 +122,9 @@ class RESTTests(unittest.TestCase):
             self.juan_id,
             self.juan_password
         )
+        self.credit_card_number = 1234
+        self.card_expiration_date = date.today()
+        self.credit_card_owner = 'Tomas'
 
     def now(self):
         return datetime(
@@ -135,7 +132,9 @@ class RESTTests(unittest.TestCase):
             month=3,
             day=11
         )
-        # creo que esto no hay que hardcodearlo, dijo que tenia que funcionar siempre independiente de la fecha
+
+    def today(self):
+        return date.today()
 
     def test01_can_not_create_cart_with_invalid_username(self):
         with self.assertRaises(Exception) as cm:
@@ -146,6 +145,8 @@ class RESTTests(unittest.TestCase):
             RESTInterface.INVALID_CREDENTIALS
         )
 
+        #Asertar que no se creo
+
     def test02_can_not_create_cart_with_invalid_password(self):
         with self.assertRaises(Exception) as cm:
             self.interface.create_cart(self.juan_id, 'invalid_password')
@@ -154,8 +155,11 @@ class RESTTests(unittest.TestCase):
             cm.exception.message,
             RESTInterface.INVALID_CREDENTIALS
         )
+        #asertar que no se creo
 
     def test03_can_create_cart_with_valid_credentials(self):
+        #esto para mi hay que revisarlo...
+
         self.assertEqual(len(self.interface.list_cart(self.valid_cart_id)), 0)
 
     def test04_can_not_add_items_to_an_expirated_cart(self):
@@ -165,11 +169,13 @@ class RESTTests(unittest.TestCase):
             return previous_datetime + timedelta(minutes=30)
         self.now = partial(now, self)
 
-        with self.assertRaises(
-                Exception,
-                msg=RESTInterface.EXPIRATED_CART_MSG):
-
+        with self.assertRaises(Exception) as cm:
             self.interface.add_to_cart(self.valid_cart_id, object(), 1)
+
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.EXPIRATED_CART_MSG
+            )
 
         # ASERTAR QUE NO SE AGREGO, no se bien como hacerlo, porque si bien
         # es que el list del carro sea el mismo, como esta expirado no podes
@@ -181,33 +187,175 @@ class RESTTests(unittest.TestCase):
 
         items_now = self.interface.list_cart(self.valid_cart_id)
         self.assertTrue(old_items != items_now)
+
+        self.assertTrue(old_items != items_now)
         # supongo que verificar que cambio alcanza, verificar que agrega bien
         # creo yo es responsabilidad de un test unitario del carro.
 
     def test06_can_not_list_expirated_cart(self):
-        pass #TODO
-    def test07_can_list_non_expirated_cart(self):
-        pass #TODO
-    def test08_can_not_checkout_expirated_cart(self):
-        pass #TODO
-    def test09_can_checkout_non_expirated_cart(self):
-        pass #TODO
-    def test10_cart_can_only_be_checkedout_once(self):
-        pass #TODO
-    def test11_can_not_list_purchases_expirated_cart(self):
-        pass #TODO
-    def test12_can_list_purchases_non_expirated_cart(self):
-        pass #TODO
+        previous_datetime = self.now()
 
-    def test13_cart_ID_generator_does_never_return_the_same_ID(self):
-        #hacer check out y generar otro y ver que es distinto
+        def now(self):
+            return previous_datetime + timedelta(minutes=30)
+        self.now = partial(now, self)
+
+        with self.assertRaises(Exception) as cm:
+            self.interface.list_cart(self.valid_cart_id)
+
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.EXPIRATED_CART_MSG
+            )
+
+    def test07_can_list_non_expirated_cart(self):
+        self.interface.list_cart(self.valid_cart_id)
+        # No assertions needed?
+
+    def test08_can_not_checkout_expirated_cart(self):
+        previous_datetime = self.now()
+
+        def now(self):
+            return previous_datetime + timedelta(minutes=30)
+        self.now = partial(now, self)
+
+        with self.assertRaises(Exception) as cm:
+            self.interface.checkout_cart(
+                self.valid_cart_id,
+                self.credit_card_number,
+                self.card_expiration_date,
+                self.credit_card_owner
+                )
+
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.EXPIRATED_CART_MSG
+            )
+        # no se como asertar que no se llamo al checkout (simulador de cajero?)
+        # y que el id sigue en el diccionario ?
+
+    def test09_can_checkout_non_expirated_cart(self):
+
+        self.interface.add_to_cart(self.valid_cart_id, self.item_in_catalog, 1)
+        self.interface.checkout_cart(
+                self.valid_cart_id,
+                self.credit_card_number,
+                self.card_expiration_date,
+                self.credit_card_owner
+                )
+        # No assertion needed?
+
+    def test10_cart_can_only_be_checked_out_once(self):
+
+        self.interface.add_to_cart(self.valid_cart_id, self.item_in_catalog, 1)
+        self.interface.checkout_cart(
+                self.valid_cart_id,
+                self.credit_card_number,
+                self.card_expiration_date,
+                self.credit_card_owner
+                )
+        with self.assertRaises(Exception) as cm:
+            self.interface.checkout_cart(
+                self.valid_cart_id,
+                self.credit_card_number,
+                self.card_expiration_date,
+                self.credit_card_owner
+                )
+
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.INVALID_CART_ID
+            )
+        # Es inválido porque tras el checkout se borra el id.
+
+    def test11_reports_invalid_credentials_trying_to_list_purchases_with_invalid_client_ID_(self):
+        listed_purchases = 0
+        with self.assertRaises(Exception) as cm:
+            listed_purchases = self.interface.list_purchases(
+                'Pedro',
+                self.juan_password
+            )
+
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.INVALID_CREDENTIALS
+        )
+        self.assertEqual(listed_purchases, 0)
+
+    def test12_reports_invalid_credentials_trying_to_list_purchases_with_invalid_password(self):
+        listed_purchases = 0
+        with self.assertRaises(Exception) as cm:
+                listed_purchases = self.interface.list_purchases(
+                    self.juan_id,
+                    'invalid_password'
+                )
+
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.INVALID_CREDENTIALS
+        )
+        self.assertEqual(listed_purchases, 0)
+
+    def test13_can_create_list_purchases_with_valid_credentials(self):
+        listed_purchases = 0
+        self.interface.add_to_cart(self.valid_cart_id, self.item_in_catalog, 1)
+        self.interface.checkout_cart(
+                self.valid_cart_id,
+                self.credit_card_number,
+                self.card_expiration_date,
+                self.credit_card_owner
+                )
+        listed_purchases = self.interface.list_purchases(
+                self.juan_id,
+                self.juan_password
+            )
+
+        self.assertEqual(
+            listed_purchases,
+            [((self.item_in_catalog, 1),)]
+            )
+
+    def test14_cart_ID_generator_does_never_return_the_same_ID(self):
+        # hacer check out y generar otro y ver que es distinto
         pass
-    def test14_add_to_cart_reports_if_cart_ID_is_invalid(self):
-        pass
-    def test15_list_cart_reports_if_cart_ID_is_invalid(self):
-        pass
-    def test16_checkout_reports_if_cart_ID_is_invalid(self):
-        pass
+
+    def test15_add_to_cart_reports_if_cart_ID_is_invalid(self):
+        state0 = self.interface
+        with self.assertRaises(Exception) as cm:
+            self.interface.add_to_cart('invalid cart id', object(), 1)
+
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.INVALID_CART_ID
+            )
+        self.assertEqual(state0, self.interface)
+
+    def test16_list_cart_reports_if_cart_ID_is_invalid(self):
+        state0 = self.interface
+        with self.assertRaises(Exception) as cm:
+            self.interface.list_cart('invalid cart id')
+
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.INVALID_CART_ID
+            )
+        self.assertEqual(state0, self.interface)
+
+    def test17_checkout_reports_if_cart_ID_is_invalid(self):
+        state0 = self.interface
+        self.interface.add_to_cart(self.valid_cart_id, self.item_in_catalog, 1)
+        with self.assertRaises(Exception) as cm:
+            self.interface.checkout_cart(
+                    'invalid cart id',
+                    self.credit_card_number,
+                    self.card_expiration_date,
+                    self.credit_card_owner
+                    )
+
+        self.assertEqual(
+            cm.exception.message,
+            RESTInterface.INVALID_CART_ID
+            )
+        self.assertEqual(state0, self.interface)
 
 
 class ShoppingCart(object):
@@ -310,7 +458,6 @@ class Cashier(object):
         merchant_processor.charge(credit_card, cart.total())
 
         cart.save_in(client_sales_book)
-        # agregar test.
 
 
 class ShoppingCartTest(unittest.TestCase):
