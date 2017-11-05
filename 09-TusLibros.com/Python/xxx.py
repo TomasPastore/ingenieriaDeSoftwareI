@@ -15,8 +15,6 @@ class RESTInterface(object):
     EXPIRED_CART_MSG = 'Expirated cart'
     INVALID_CREDENTIALS = 'Invalid credentials'
     INVALID_CART_ID = 'Not existing cart ID'
-    CART_INDEX = 0
-    CLIENT_ID_INDEX = 1
 
     def __init__(self, users, catalog, clock, cart_ID_generator,
                  cart_validity_time):
