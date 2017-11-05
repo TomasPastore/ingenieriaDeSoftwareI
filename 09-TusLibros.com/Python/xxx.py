@@ -5,12 +5,13 @@ from datetime import date, timedelta, datetime
 from copy import copy
 from functools import partial
 import random
+import uuid
 
 class RESTInterface(object):
 
     EXPIRATED_CART_MSG = 'Expirated cart'
     INVALID_CREDENTIALS = 'Invalid credentials'
-    INVALID_CART_ID = 'Not existing cart ID' 
+    INVALID_CART_ID = 'Not existing cart ID'
     CART_INDEX = 0
     CLIENT_ID_INDEX = 1
 
@@ -27,7 +28,7 @@ class RESTInterface(object):
         self._cart_ID_generator = cart_ID_generator
 
     def create_cart(self, client_ID, client_password):
-        
+
         self.__check_valid_credentials__(client_ID, client_password)
         cart_ID = self._cart_ID_generator.new_ID()
 
@@ -45,7 +46,7 @@ class RESTInterface(object):
     def add_to_cart(self, cart_ID, book_ISBN, quantity):
         self.__check_valid_cart_ID__(cart_ID)
         self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX].add(book_ISBN, quantity)
-         
+
     def list_cart(self, cart_ID):
         self.__check_valid_cart_ID__(cart_ID)
         return self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX].list()
@@ -72,18 +73,19 @@ class RESTInterface(object):
         return self._sales_books[client_ID]
 
     def __check_valid_credentials__(self, user, password):
-        if (not user in self._users) or password != self._users[user]:          
+        if (user not in self._users) or password != self._users[user]:
             raise Exception(self.__class__.INVALID_CREDENTIALS)
 
     def __check_valid_cart_ID__(self, cart_ID):
-        if not cart_ID in self._cart_information_by_ID.keys():
+        if cart_ID not in self._cart_information_by_ID.keys():
             raise Exception(self.__class__.INVALID_CART_ID)
 
-#otra opcion es hacer un IdentifiedCart(cartIDs) como el expirableCart que verifique que este en los cartIDs
+# otra opcion es hacer un IdentifiedCart(cartIDs) como el expirableCart que verifique que este en los cartIDs
 
-#Podriamos agregarle la interfaz como observer o un notifier, y avisarle 
-#cuando expira para borrarlo del registro e ir limpiando si es que no interesa 
-#guardar los expirados, pero no esta especificado nada en el enunciado. 
+# Podriamos agregarle la interfaz como observer o un notifier, y avisarle
+# cuando expira para borrarlo del registro e ir limpiando si es que no interesa
+# guardar los expirados, pero no esta especificado nada en el enunciado.
+
 
 class ExpirableCart(object):
     def __init__(self, a_shopping_cart, validity_time, clock):
@@ -100,20 +102,11 @@ class ExpirableCart(object):
         else:
             raise Exception('Expirated cart')
 
+
 class CartIDGenerator(object):
-    #Para asegurarnos que no genermamos de nuevo el mismo ID, ya que lo borramos
-    #tras el checkout.
-    def __init__(self):
-        self._generated_IDs = set()
-    
     def new_ID(self):
-        
-        ID = ''.join(random.choice('0123456789ABCDEF') for i in range(16)) 
-        
-        if not ID in self._generated_IDs:
-            return ID
-        else: 
-            return self.new_ID()
+        return uuid.uuid4()
+
 
 class RESTTests(unittest.TestCase):
 
@@ -124,8 +117,13 @@ class RESTTests(unittest.TestCase):
             self.juan_id: self.juan_password
         }
         self.item_in_catalog = object()
-        self.catalog = Catalog({self.item_in_catalog:10})
-        self.interface = RESTInterface(self.users, self.catalog, self, CartIDGenerator())
+        self.catalog = Catalog({self.item_in_catalog: 10})
+        self.interface = RESTInterface(
+            self.users,
+            self.catalog,
+            self,
+            CartIDGenerator()
+        )
         self.valid_cart_id = self.interface.create_cart(
             self.juan_id,
             self.juan_password
@@ -136,7 +134,8 @@ class RESTTests(unittest.TestCase):
             year=2017,
             month=3,
             day=11
-        ) #creo que esto no hay que hardcodearlo, dijo que tenia que funcionar siempre independiente de la fecha
+        )
+        # creo que esto no hay que hardcodearlo, dijo que tenia que funcionar siempre independiente de la fecha
 
     def test01_can_not_create_cart_with_invalid_username(self):
         with self.assertRaises(Exception) as cm:
@@ -159,7 +158,6 @@ class RESTTests(unittest.TestCase):
     def test03_can_create_cart_with_valid_credentials(self):
         self.assertEqual(len(self.interface.list_cart(self.valid_cart_id)), 0)
 
-        
     def test04_can_not_add_items_to_an_expirated_cart(self):
         previous_datetime = self.now()
 
@@ -167,24 +165,24 @@ class RESTTests(unittest.TestCase):
             return previous_datetime + timedelta(minutes=30)
         self.now = partial(now, self)
 
-        with self.assertRaises( 
+        with self.assertRaises(
                 Exception,
                 msg=RESTInterface.EXPIRATED_CART_MSG):
 
             self.interface.add_to_cart(self.valid_cart_id, object(), 1)
 
-        #ASERTAR QUE NO SE AGREGO, no se bien como hacerlo, porque si bien 
-        #es que el list del carro sea el mismo, como esta expirado no podes 
-        #pedir list_cart() porque esta expirado
+        # ASERTAR QUE NO SE AGREGO, no se bien como hacerlo, porque si bien
+        # es que el list del carro sea el mismo, como esta expirado no podes
+        # pedir list_cart() porque esta expirado
 
     def test05_can_add_items_to_a_non_expirated_cart(self):
         old_items = self.interface.list_cart(self.valid_cart_id)
         self.interface.add_to_cart(self.valid_cart_id, self.item_in_catalog, 1)
 
         items_now = self.interface.list_cart(self.valid_cart_id)
-        self.assertTrue(old_items != items_now )
-        #supongo que verificar que cambio alcanza, verificar que agrega bien 
-        #creo yo es responsabilidad de un test unitario del carro. 
+        self.assertTrue(old_items != items_now)
+        # supongo que verificar que cambio alcanza, verificar que agrega bien
+        # creo yo es responsabilidad de un test unitario del carro.
 
     def test06_can_not_list_expirated_cart(self):
         pass #TODO
@@ -202,14 +200,15 @@ class RESTTests(unittest.TestCase):
         pass #TODO
 
     def test13_cart_ID_generator_does_never_return_the_same_ID(self):
-        #hacer check out y generar otro y ver que es distinto           
+        #hacer check out y generar otro y ver que es distinto
         pass
     def test14_add_to_cart_reports_if_cart_ID_is_invalid(self):
         pass
     def test15_list_cart_reports_if_cart_ID_is_invalid(self):
-        pass    
+        pass
     def test16_checkout_reports_if_cart_ID_is_invalid(self):
         pass
+
 
 class ShoppingCart(object):
 
@@ -233,8 +232,9 @@ class ShoppingCart(object):
         else:
             raise Exception(self.__class__.NOT_IN_CATALOG_ERROR_MSG)
 
-    def list(self): #supongo que cuando se crean las tuplas son copias. sino usar copy
-        return [(item,self.number_of(item)) for item in self.items]
+    def list(self):
+        # supongo que cuando se crean las tuplas son copias. sino usar copy
+        return [(item, self.number_of(item)) for item in self.items]
 
     def number_of(self, an_item):
         return self.items[an_item]
@@ -245,6 +245,7 @@ class ShoppingCart(object):
 
     def save_in(self, a_client_sales_book):
         a_client_sales_book.append(tuple(self.list()))
+
 
 class Catalog(object):
     def __init__(self, items_with_prices):
@@ -277,8 +278,10 @@ class CreditCard(object):
 
     def number(self):
         return copy(self.number)
+
     def expiration_date(self):
         return copy(self.expiration_date)
+
     def owner(self):
         return copy(self.card_owner)
 
@@ -307,9 +310,9 @@ class Cashier(object):
         merchant_processor.charge(credit_card, cart.total())
 
         cart.save_in(client_sales_book)
-        #agregar test. 
+        # agregar test.
 
-# TODO: Creo que habría que cambiarle el nombre a esta clase
+
 class ShoppingCartTest(unittest.TestCase):
 
     def setUp(self):
@@ -317,8 +320,8 @@ class ShoppingCartTest(unittest.TestCase):
         self.item_not_in_catalog = object()
         self.catalog = Catalog({
             self.item_in_catalog: 10,
-            "Jamon":5,
-            "Queso":10
+            "Jamon": 5,
+            "Queso": 10
             })
         self.cart = ShoppingCart(self.catalog)
 
@@ -380,7 +383,7 @@ class CashierTests(unittest.TestCase):
     def setUp(self):
 
         item = object()
-        catalog = Catalog({item:10})
+        catalog = Catalog({item: 10})
         self.merchant_processor = MerchantProcessor()
         self.client_empty_sales_book = []
         self.empty_cart = ShoppingCart(catalog)
@@ -499,7 +502,7 @@ class CashierTests(unittest.TestCase):
         self.assertFalse(self.non_empty_cart.is_empty())
 
     def test06_cashier_saves_sale_if_all_is_ok(self):
-        
+
         self.cashier.check_out(
             cart=self.non_empty_cart,
             credit_card=self.valid_card,
@@ -509,7 +512,10 @@ class CashierTests(unittest.TestCase):
         )
 
         self.assertEqual(len(self.client_empty_sales_book), 1)
-        self.assertEqual(self.client_empty_sales_book[0], tuple(self.non_empty_cart.list()) )
+        self.assertEqual(
+            self.client_empty_sales_book[0],
+            tuple(self.non_empty_cart.list())
+        )
 
 
 if __name__ == '__main__':
