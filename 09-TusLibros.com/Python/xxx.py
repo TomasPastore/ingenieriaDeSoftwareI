@@ -7,6 +7,7 @@ from functools import partial
 import random
 import uuid
 
+
 class RESTInterface(object):
 
     EXPIRATED_CART_MSG = 'Expirated cart'
@@ -17,12 +18,12 @@ class RESTInterface(object):
 
     def __init__(self, users, catalog, clock, cart_ID_generator):
         self._users = users
-        #cartID: (carro, clientID)
+        # cartID: (carro, clientID)
         self._cart_information_by_ID = {}
         self._catalog = catalog
         self._clock = clock
         self._sales_books = {}
-        #esto no sabia como escribirlo mas corto
+        # esto no sabia como escribirlo mas corto
         for user in users.keys():
             self._sales_books[user] = []
         self._cart_ID_generator = cart_ID_generator
@@ -32,11 +33,11 @@ class RESTInterface(object):
         self.__check_valid_credentials__(client_ID, client_password)
         cart_ID = self._cart_ID_generator.new_ID()
 
-        self._cart_information_by_ID[cart_ID]=(
+        self._cart_information_by_ID[cart_ID] = (
                     ExpirableCart(
                         ShoppingCart(self._catalog),
-                            timedelta(minutes=30),
-                            self._clock
+                        timedelta(minutes=30),
+                        self._clock
                         ),
                     client_ID
                     )
@@ -45,7 +46,10 @@ class RESTInterface(object):
 
     def add_to_cart(self, cart_ID, book_ISBN, quantity):
         self.__check_valid_cart_ID__(cart_ID)
-        self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX].add(book_ISBN, quantity)
+        self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX].add(
+            book_ISBN,
+            quantity
+        )
 
     def list_cart(self, cart_ID):
         self.__check_valid_cart_ID__(cart_ID)
@@ -55,17 +59,20 @@ class RESTInterface(object):
                       credit_card_owner):
         self.__check_valid_cart_ID__(cart_ID)
         a_cashier = Cashier()
-        a_credit_card = CreditCard(credit_card_number, card_expiration_date, credit_card_owner)
+        a_credit_card = CreditCard(
+            credit_card_number,
+            card_expiration_date,
+            credit_card_owner)
         client_ID = self._cart_information_by_ID[cart_ID][self.__class__.CLIENT_ID_INDEX]
         a_cashier.check_out(
-            cart = self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX],
-            credit_card = a_credit_card,
-            merchant_processor = MerchantProcessor(),
-            date = self._clock.today(),
-            client_sales_book = self._sales_books[client_ID]
+            cart=self._cart_information_by_ID[cart_ID][self.__class__.CART_INDEX],
+            credit_card=a_credit_card,
+            merchant_processor=MerchantProcessor(),
+            date=self._clock.today(),
+            client_sales_book=self._sales_books[client_ID]
             )
 
-        #Decision de implementacion, la venta la guarda el cashier
+        # Decision de implementacion, la venta la guarda el cashier
         self._cart_information_by_ID.pop(cart_ID)
 
     def list_purchases(self, client_ID, client_password):
@@ -145,7 +152,7 @@ class RESTTests(unittest.TestCase):
             RESTInterface.INVALID_CREDENTIALS
         )
 
-        #Asertar que no se creo
+        # Asertar que no se creo
 
     def test02_can_not_create_cart_with_invalid_password(self):
         with self.assertRaises(Exception) as cm:
@@ -155,10 +162,10 @@ class RESTTests(unittest.TestCase):
             cm.exception.message,
             RESTInterface.INVALID_CREDENTIALS
         )
-        #asertar que no se creo
+        # Asertar que no se creo
 
     def test03_can_create_cart_with_valid_credentials(self):
-        #esto para mi hay que revisarlo...
+        # esto para mi hay que revisarlo...
 
         self.assertEqual(len(self.interface.list_cart(self.valid_cart_id)), 0)
 
@@ -402,7 +409,7 @@ class Catalog(object):
     def __contains__(self, an_item):
         return an_item in self._prices
 
-    #def add(self, item, price):
+    # def add(self, item, price):
     #   self._prices[item] = price
 
     def price(self, item):
