@@ -24,10 +24,9 @@ class RESTInterface(object):
         self._cart_information_by_ID = {}
         self._catalog = catalog
         self._clock = clock
-        self._sales_books = {}
         self._cart_validity_time = cart_validity_time
-        for user in users.keys():
-            self._sales_books[user] = []
+        # Así se hace más corto (?)
+        self._sales_books = {user: [] for user in users}
         self._cart_ID_generator = cart_ID_generator
 
     def create_cart(self, client_ID, client_password):
