@@ -23,7 +23,6 @@ class RESTInterface(object):
         self._catalog = catalog
         self._clock = clock
         self._cart_validity_time = cart_validity_time
-        # Así se hace más corto (?)
         self._sales_books = {user: [] for user in users}
         self._cart_ID_generator = cart_ID_generator
 
