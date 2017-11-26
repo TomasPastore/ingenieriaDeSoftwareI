@@ -9,7 +9,20 @@ import random
 import uuid
 
 Sale = namedtuple('Sale', ['items','total_amount'])
- 
+
+class Catalog(object):
+    def __init__(self, items_with_prices):
+        self._prices = items_with_prices
+
+    def __contains__(self, an_item):
+        return an_item in self._prices
+
+    # def add(self, item, price):
+    #   self._prices[item] = price
+
+    def price(self, item):
+        return self._prices[item]
+
 class ShoppingCart(object):
 
     NOT_IN_CATALOG_ERROR_MSG = "Item's not in catalog"
@@ -46,68 +59,6 @@ class ShoppingCart(object):
         return round(sum([self._catalog.price(item)*self.number_of(item) for
                     item in self.items]), 2)
 
-class Catalog(object):
-    def __init__(self, items_with_prices):
-        self._prices = items_with_prices
-
-    def __contains__(self, an_item):
-        return an_item in self._prices
-
-    # def add(self, item, price):
-    #   self._prices[item] = price
-
-    def price(self, item):
-        return self._prices[item]
-
-
-class CheckoutError(Exception):
-    def __init__(self, message):
-        self.message = message
-
-
-class CreditCard(object):
-    def __init__(self, number, expiration_date, card_owner):
-        # Validar parametros
-        self.number = number
-        self.expiration_date = expiration_date
-        self.card_owner = card_owner
-
-    def is_expired(self, date):
-        return self.expiration_date < date
-
-    def number(self):
-        return copy(self.number)
-
-    def expiration_date(self):
-        return copy(self.expiration_date)
-
-    def owner(self):
-        return copy(self.card_owner)
-
-
-class Cashier(object):
-    EXPIRATED_CARD_ERROR_MSG = 'This card is no longer valid'
-    EMPTY_CART_ERROR_MESSAGE = 'Can not check out an empty cart'
-
-    def check_out(self, cart, credit_card, merchant_processor,
-                  date, client_sales_book):
-
-        if credit_card.is_expired(date):
-            raise CheckoutError(
-                self.__class__.EXPIRATED_CARD_ERROR_MSG
-            )
-        if cart.is_empty():
-            raise CheckoutError(
-                self.__class__.EMPTY_CART_ERROR_MESSAGE
-            )
-
-        transaction_amount = cart.total()
-        transaction_ID = merchant_processor.charge(credit_card,transaction_amount)
-        sale = Sale(cart.list(),transaction_amount)
-        client_sales_book.append(sale)
-
-        return transaction_ID,transaction_amount
-
 class ShoppingCartTest(unittest.TestCase):
 
     def setUp(self):
@@ -141,7 +92,20 @@ class ShoppingCartTest(unittest.TestCase):
 
         self.assertEqual(self.cart.number_of(self.item_not_in_catalog), 0)
 
-    def test04_can_list_items_in_cart(self):
+    def test04_quantity_to_add_must_be_positive(self):
+
+        with self.assertRaises(Exception) as cm:
+            self.cart.add(self.item_in_catalog, 0)
+
+        self.assertEqual(
+            cm.exception.message,
+            ShoppingCart.QUANTITY_ERROR_MSG
+        )
+
+        self.assertEqual(self.cart.number_of(self.item_in_catalog), 0)
+    
+
+    def test05_can_list_items_in_cart(self):
         self.cart.add(self.item_in_catalog, 1)
         self.cart.add("Jamon", 3)
         self.cart.add("Queso", 2)
@@ -153,33 +117,55 @@ class ShoppingCartTest(unittest.TestCase):
 
         self.assertEqual(set(listed_cart), set(self.cart.list()))
 
+class CreditCard(object):
+    EMPTY_OWNER_MSG = "Owner is empty."
+    MUST_HAVE_16_DIGITS = "Credit Card must have 16 digits."
 
-class MerchantProcessor(object):
-    #Clase de produccion
-    def charge(self, credit_card, amount):
-        pass
+    def __init__(self, number, expiration_date, card_owner):
+        if number / 10**15 == 0:
+            raise Exception(self.__class__.MUST_HAVE_16_DIGITS)
+        
+        if len(card_owner) == 0:
+            raise Exception(self.__class__.EMPTY_OWNER_MSG)
 
+        self.number = number
+        self.expiration_date = expiration_date
+        self.card_owner = card_owner
 
-class MerchantProcessorSimulator(object):
+    def is_expired(self, date):
+        return self.expiration_date < date
 
-    STOLEN_CARD_ERROR_MSG = 'Stolen card'
-    UNFOUNDED_CARD_ERROR_MSG = 'Card without founds'
-    CALLED_CARD_EXCEPTION_MSG = 'Called'
+    def number(self):
+        return copy(self.number)
 
-    def __init__(self, stolen_cards, unfounded_cards):
-        self.stolen_cards = stolen_cards
-        self.unfounded_cards = unfounded_cards
-        self.charge_called = False
+    def expiration_date(self):
+        return copy(self.expiration_date)
 
-    def charge(self, credit_card, amount):
-        if credit_card in self.stolen_cards:
-            raise CheckoutError(self.__class__.STOLEN_CARD_ERROR_MSG)
-        elif credit_card in self.unfounded_cards:
-            raise CheckoutError(self.__class__.UNFOUNDED_CARD_ERROR_MSG)
-        else:
-            transaction_ID = uuid.uuid4()
-            self.charge_called = True
-            return transaction_ID
+    def owner(self):
+        return copy(self.card_owner)
+
+class Cashier(object):
+    EXPIRATED_CARD_ERROR_MSG = 'This card is no longer valid'
+    EMPTY_CART_ERROR_MESSAGE = 'Can not check out an empty cart'
+
+    def check_out(self, cart, credit_card, merchant_processor,
+                  date, client_sales_book):
+
+        if credit_card.is_expired(date):
+            raise CheckoutError(
+                self.__class__.EXPIRATED_CARD_ERROR_MSG
+            )
+        if cart.is_empty():
+            raise CheckoutError(
+                self.__class__.EMPTY_CART_ERROR_MESSAGE
+            )
+
+        transaction_amount = cart.total()
+        transaction_ID = merchant_processor.charge(credit_card,transaction_amount)
+        sale = Sale(cart.list(),transaction_amount)
+        client_sales_book.append(sale)
+
+        return transaction_ID,transaction_amount
 
 class CashierTests(unittest.TestCase):
 
@@ -196,22 +182,22 @@ class CashierTests(unittest.TestCase):
 
         self.cashier = Cashier()
         self.expired_card = CreditCard(
-            number=22,
+            number=2222111122221111,
             expiration_date=date.today() - timedelta(days=1),
             card_owner='Pedro de Mendoza'
         )
         self.valid_card = CreditCard(
-            number=23,
+            number=2222111122221113,
             expiration_date=date.today() + timedelta(days=1),
             card_owner='Gilgamesh'
         )
         self.stolen_card = CreditCard(
-            number=24,
+            number=2222111122221114,
             expiration_date=date.today() + timedelta(days=1),
             card_owner='Me'
         )
         self.unfounded_card = CreditCard(
-            number=25,
+            number=2222444455556666,
             expiration_date=date.today() + timedelta(days=1),
             card_owner='You'
         )
@@ -324,7 +310,36 @@ class CashierTests(unittest.TestCase):
             self.client_empty_sales_book[0].total_amount,
             self.non_empty_cart.total()
         )
-    
+
+class MerchantProcessor(object):
+    #Clase de produccion
+    def charge(self, credit_card, amount):
+        pass
+
+class MerchantProcessorSimulator(object):
+
+    STOLEN_CARD_ERROR_MSG = 'Stolen card'
+    UNFOUNDED_CARD_ERROR_MSG = 'Card without founds'
+    CALLED_CARD_EXCEPTION_MSG = 'Called'
+
+    def __init__(self, stolen_cards, unfounded_cards):
+        self.stolen_cards = stolen_cards
+        self.unfounded_cards = unfounded_cards
+        self.charge_called = False
+
+    def charge(self, credit_card, amount):
+        if credit_card in self.stolen_cards:
+            raise CheckoutError(self.__class__.STOLEN_CARD_ERROR_MSG)
+        elif credit_card in self.unfounded_cards:
+            raise CheckoutError(self.__class__.UNFOUNDED_CARD_ERROR_MSG)
+        else:
+            transaction_ID = uuid.uuid4()
+            self.charge_called = True
+            return transaction_ID
+
+class CheckoutError(Exception):
+    def __init__(self, message):
+        self.message = message
 
 if __name__ == '__main__':
     unittest.main()

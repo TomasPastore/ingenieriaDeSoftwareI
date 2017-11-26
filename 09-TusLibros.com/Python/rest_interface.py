@@ -161,7 +161,7 @@ class RESTTests(unittest.TestCase):
             self.juan_id,
             self.juan_password
         )
-        self.credit_card_number = 1234
+        self.credit_card_number = 1111222233334444
         self.card_expiration_date = date.today()
         self.credit_card_owner = 'Tomas'
 
@@ -218,8 +218,6 @@ class RESTTests(unittest.TestCase):
         items_now = self.interface.list_cart(self.valid_cart_id)
 
         self.assertTrue(old_items != items_now)
-        # supongo que verificar que cambio alcanza, verificar que agrega bien
-        # creo yo es responsabilidad de un test unitario del carro.
 
     def test06_can_not_list_expired_cart(self):
         self.fast_forward(self.validity_time)
@@ -372,6 +370,21 @@ class RESTTests(unittest.TestCase):
             cm.exception.message,
             RESTInterface.INVALID_CART_ID
             )
+
+    def test18_quantity_to_add_must_be_positive(self):
+        old_items = self.interface.list_cart(self.valid_cart_id)
+        
+        with self.assertRaises(Exception) as cm:
+            self.interface.add_to_cart(self.valid_cart_id, self.item_in_catalog, 0)
+
+        self.assertEqual(
+            cm.exception.message,
+            ShoppingCart.QUANTITY_ERROR_MSG
+            )
+
+        items_now = self.interface.list_cart(self.valid_cart_id)
+
+        self.assertTrue(old_items == items_now)
 
 if __name__ == '__main__':
     unittest.main()
